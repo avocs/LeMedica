@@ -1,0 +1,3 @@
+{
+  "/api/ocr-menus/regenerate-csv/route": "app/api/ocr-menus/regenerate-csv/route.js"
+}

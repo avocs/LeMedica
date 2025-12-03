@@ -1,0 +1,79 @@
+{
+    "batch_id": "ecfa0da2-2c45-4316-bd09-f60dd1d5629a",
+    "packages": [
+      {
+        "title": "Basic Hydration Drip",
+        "hospital_name": "CarePlus Clinic",
+        "treatment_name": "IV Drip Therapy",
+        "sub_treatments": "Hydration",
+        "price": 80,
+        "currency": "MYR",
+        "featured": false,
+        "status": "active",
+        "is_le_package": false,
+        "_meta": {
+          "source_file": "iv-drip-menu.pdf",
+          "source_page": 1,
+          "confidence_score": 0.9,
+          "warnings": [
+            "Hospital not recognized: CarePlus Clinic",
+            "Treatment not recognized: IV Drip Therapy"
+          ],
+          "matcher": {
+            "hospitalScore": 0.5,
+            "treatmentScore": 0.6923076923076923
+          }
+        }
+      },
+      {
+        "title": "Calm Drip",
+        "hospital_name": "CarePlus Clinic",
+        "treatment_name": "IV Drip Therapy",
+        "sub_treatments": "Stress Relief",
+        "price": 480,
+        "currency": "MYR",
+        "featured": false,
+        "status": "active",
+        "is_le_package": false,
+        "_meta": {
+          "source_file": "iv-drip-menu.pdf",
+          "source_page": 1,
+          "confidence_score": 0.9,
+          "warnings": [
+            "Hospital not recognized: CarePlus Clinic",
+            "Treatment not recognized: IV Drip Therapy"
+          ],
+          "matcher": {
+            "hospitalScore": 0.5,
+            "treatmentScore": 0.6923076923076923
+          }
+        }
+      },
+      {
+        "title":"Liver Detox Drip",
+        "hospital_name":"CarePlus Clinic",
+        "treatment_name":"IV Drip Therapy",
+        "sub_treatments":"Detoxification",
+        "price":280,
+        "currency":"MYR",
+        "featured":false,
+        "status":"active",
+        "is_le_package":false,
+        "_meta": {
+            "source_file":"iv-drip-menu.pdf",
+            "source_page":1,
+            "confidence_score":0.9,
+            "warnings":[
+                "Hospital not recognized: CarePlus Clinic",
+                "Treatment not recognized: IV Drip Therapy"
+            ],
+            "matcher":{
+                "hospitalScore":0.5,
+                "treatmentScore":0.6923076923076923
+            }
+        }
+      }
+  
+    ]
+  }
+  
