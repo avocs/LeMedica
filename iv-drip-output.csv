@@ -1,4 +1,0 @@
-title,description,details,hospital_name,treatment_name,Sub Treatments,price,original_price,currency,duration,treatment_category,anaesthesia,commission,featured,status,doctor_name,is_le_package,includes,image_file_id,hospital_location,category,hospital_country,translation_title,translation_description,translation_details,translation
-Basic Hydration Drip,,,CarePlus Clinic,IV Drip Therapy,Hydration,80,,MYR,,,,,FALSE,active,,FALSE,,,,,,,,,
-Calm Drip,,,CarePlus Clinic,IV Drip Therapy,Stress Relief,480,,MYR,,,,,FALSE,active,,FALSE,,,,,,,,,
-Liver Detox Drip,,,CarePlus Clinic,IV Drip Therapy,Detoxification,280,,MYR,,,,,FALSE,active,,FALSE,,,,,,,,,

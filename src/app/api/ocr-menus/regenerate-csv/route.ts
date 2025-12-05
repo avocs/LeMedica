@@ -2,28 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { PackageRow } from "../../../../types/packages";
 import { normalizePackageRow } from "../../../../services/normalizer";
 import { generateBulkCsv } from "../../../../services/csvGenerator";
+import fs from "fs/promises";
+import path from "path";
 
 /**
  * POST /api/ocr-menus/regenerate-csv
  * ----------------------------------
- * Accepts a JSON payload { packages: PackageRow[], forwardToImporter?: boolean }
- * and responds with a CSV file (text/csv) that mirrors the bulk import template.
+ * Accepts either:
+ *  - A direct payload: { packages: PackageRow[], ... }
+ *  - The full OCR response from /api/ocr-menus
+ *    { success, batch_id, files, packages, summary, ... }
+ *
+ * Returns a text/csv response that matches the bulk import template.
+ * Also writes a copy of the CSV into ./output/csv on the server.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    if (!Array.isArray(body?.packages)) {
+
+    const packagesInput = Array.isArray(body?.packages)
+      ? body.packages
+      : null;
+
+    if (!packagesInput || !Array.isArray(packagesInput)) {
       return NextResponse.json(
-        { success: false, message: "packages array is required" },
+        {
+          success: false,
+          message:
+            "No packages array found. Expected either { packages: [...] } or a full OCR response that includes a 'packages' array.",
+        },
         { status: 400 }
       );
     }
 
-    const normalizedPackages = (body.packages as PackageRow[]).map((pkg) =>
+    const normalizedPackages = (packagesInput as PackageRow[]).map((pkg) =>
       normalizePackageRow(pkg)
     );
     const csvContent = generateBulkCsv(normalizedPackages);
 
+    // Optional forwarding to importer
     let importerStatus: string | undefined;
     if (body.forwardToImporter) {
       const importerResult = await forwardCsvToImporter(csvContent, {
@@ -33,11 +50,28 @@ export async function POST(req: NextRequest) {
       importerStatus = importerResult;
     }
 
-    const fileName = body.fileName || "clinic-menu-packages.csv";
+    // 4) Build CSV response
+    const batchId: string =
+      typeof body.batch_id === "string" && body.batch_id.trim().length > 0
+        ? body.batch_id.trim()
+        : "clinic-menu-batch";
+
+    // If the batchId already looks like "batch_20251204_215614_omm4",
+    // reuse it directly as the base filename. Otherwise, prefix it.
+    const defaultBaseName = batchId.startsWith("batch_")
+      ? batchId
+      : `batch_${batchId}`;
+
+    const fileName =
+      typeof body.fileName === "string" && body.fileName.trim().length > 0
+        ? body.fileName.trim()
+        : `${defaultBaseName}.csv`;
+
     const headers = new Headers({
       "Content-Type": "text/csv",
       "Content-Disposition": `attachment; filename="${fileName}"`,
     });
+
     if (importerStatus) {
       headers.set("x-importer-status", importerStatus);
     }
@@ -52,6 +86,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Helper: forward CSV to existing bulk importer endpoint
+// ---------------------------------------------------------------------------
 async function forwardCsvToImporter(
   csvContent: string,
   options: { confirmAutoCreate?: boolean; clearExisting?: boolean }
@@ -61,6 +98,7 @@ async function forwardCsvToImporter(
     (process.env.APP_BASE_URL
       ? `${process.env.APP_BASE_URL}/api/admin/bulk-import-packages`
       : "http://localhost:3000/api/admin/bulk-import-packages");
+
   const importerUrl = baseUrl;
 
   try {
@@ -101,4 +139,3 @@ async function safeJson(response: Response) {
     return null;
   }
 }
-

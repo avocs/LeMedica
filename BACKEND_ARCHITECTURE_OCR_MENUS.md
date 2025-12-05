@@ -1,4 +1,5 @@
 # Clinic Menu OCR → CSV Backend Architecture
+_NOTE:_ as of 05/12 this is outdated still
 
 ## High-Level Flow
 
