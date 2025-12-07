@@ -1,4 +1,4 @@
-// File: C:\Users\User\Documents\side quest\LeMedica\src\app\api\ocr-menus\regenerate-csv\route.ts
+// File: C:\Users\User\Documents\side_quest\LeMedica\src\app\api\ocr-menus\regenerate-csv\route.ts
 import * as entry from '../../../../../../src/app/api/ocr-menus/regenerate-csv/route.js'
 import type { NextRequest } from 'next/server.js'
 

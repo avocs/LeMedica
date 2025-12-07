@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleUploadAndExtractOcr } from "../../../services/ocr";
 import { extractPackagesFromOcrText } from "../../../services/aiExtractor";
-import { PackageRow } from "../../../types/packages";
+import { PackageRow} from "@/lib/types/ocr";
 import {
   normalizePackageRow,
   validatePackageBatch,

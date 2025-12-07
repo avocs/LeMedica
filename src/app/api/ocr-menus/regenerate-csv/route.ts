@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PackageRow } from "../../../../types/packages";
+import { PackageRow} from "@/lib/types/ocr";
 import { normalizePackageRow } from "../../../../services/normalizer";
 import { generateBulkCsv } from "../../../../services/csvGenerator";
-import fs from "fs/promises";
-import path from "path";
+import { join } from "path";
+import { promises as fs } from "fs";
+
+// OUTPUT TO CSV OUTPUTS FOLDER
+const CSV_OUTPUT_DIR = join(process.cwd(), "csv_outputs")
+
+// Ensure folder exists
+async function ensureCsvOutputDir() {
+  await fs.mkdir(CSV_OUTPUT_DIR, { recursive: true })
+}
+
 
 /**
  * POST /api/ocr-menus/regenerate-csv
@@ -56,11 +65,11 @@ export async function POST(req: NextRequest) {
         ? body.batch_id.trim()
         : "clinic-menu-batch";
 
-    // If the batchId already looks like "batch_20251204_215614_omm4",
+    // If the batchId already looks like "b_20251204_215614_omm4",
     // reuse it directly as the base filename. Otherwise, prefix it.
-    const defaultBaseName = batchId.startsWith("batch_")
+    const defaultBaseName = batchId.startsWith("b_")
       ? batchId
-      : `batch_${batchId}`;
+      : `b_${batchId}`;
 
     const fileName =
       typeof body.fileName === "string" && body.fileName.trim().length > 0
@@ -76,7 +85,19 @@ export async function POST(req: NextRequest) {
       headers.set("x-importer-status", importerStatus);
     }
 
+    // NEW: also persist CSV to disk under csv-outputs/
+    try {
+      await ensureCsvOutputDir();
+      const filePath = join(CSV_OUTPUT_DIR, fileName);
+      await fs.writeFile(filePath, csvContent, "utf8");
+    } catch (writeErr) {
+      // Don’t fail the request just because saving failed – log & continue
+      console.error("Failed to persist regenerated CSV to csv-outputs/:", writeErr);
+    }
+
     return new NextResponse(csvContent, { status: 200, headers });
+    
+
   } catch (error) {
     console.error("Failed to regenerate CSV:", error);
     return NextResponse.json(

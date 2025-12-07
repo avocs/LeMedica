@@ -1,4 +1,4 @@
-import { PackageRow } from "../types/packages";
+import type { PackageRow } from "@/lib/types/ocr";
 
 export const CSV_HEADERS = [
   "title",

@@ -1,5 +1,5 @@
-import { PackageRow } from "../types/packages";
-import { matchHospitalName, matchTreatmentName } from "../lib/matching";
+import type { PackageRow} from "@/lib/types/ocr";
+import { matchHospitalName, matchTreatmentName } from "@/lib/validation";
 
 const REQUIRED_FIELDS: Array<keyof PackageRow> = [
   "title",

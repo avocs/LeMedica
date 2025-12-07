@@ -1,4 +1,4 @@
-import { OcrPage, PackageRow } from "../types/packages";
+import type { PackageRow, OcrPage } from "@/lib/types/ocr";
 import { callBedrockForExtraction } from "./bedrockClient";
 import { normalizePackageRow } from "./normalizer";
 

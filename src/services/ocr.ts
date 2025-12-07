@@ -5,7 +5,7 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import Tesseract from "tesseract.js";
 import pdfParse from "pdf-parse";
-import { OcrPage } from "../types/packages";
+import type { OcrPage } from "@/lib/types/ocr";
 
 
 const OCR_DEBUG_DIR = join(process.cwd(), "tmp", "ocr-debug");
@@ -248,26 +248,23 @@ async function runOcrOnPdf(file: SavedFile): Promise<OcrPage[]> {
  * doesn’t hang the entire request indefinitely.
  */
 async function runTesseract(buffer: Buffer): Promise<string> {
-  const recognizePromise = Tesseract.recognize(buffer, OCR_LANGS, {
-    tessjs_create_pdf: "0",
-  });
+  const recognizePromise = Tesseract.recognize(buffer, OCR_LANGS);
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(
       () =>
         reject(
           new Error(
-            `Tesseract OCR timed out after ${OCR_TIMEOUT_MS} ms (languages: ${OCR_LANGS})`
-          )
+            `Tesseract OCR timed out after ${OCR_TIMEOUT_MS} ms (languages: ${OCR_LANGS})`,
+          ),
         ),
-      OCR_TIMEOUT_MS
+      OCR_TIMEOUT_MS,
     );
   });
 
-  const result: any = await Promise.race([recognizePromise, timeoutPromise]);
-  return result?.data?.text || "";
+  const result = await Promise.race([recognizePromise, timeoutPromise]);
+  return result.data?.text || "";
 }
-
 
 /**
  * cleanText
