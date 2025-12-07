@@ -89,14 +89,22 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
     }
 
     const fileId = randomUUID();
-    const fileName = file.name || `upload-${fileId}`;
-    const tempPath = join(TEMP_DIR, `${fileId}-${fileName}`);
+
+    // 🔹 Use only the last path segment (strip folder parts)
+    const originalName = file.name || `upload-${fileId}`;
+    const baseName = originalName.split(/[\\/]/).pop() || originalName;
+
+    // 🔹 Sanitize for filesystem (no weird chars / slashes)
+    const safeName = baseName.replace(/[^\w.\-]+/g, "_");
+
+    const tempPath = join(TEMP_DIR, `${fileId}-${safeName}`);
+
     const buffer = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(tempPath, buffer);
 
     savedFiles.push({
       fileId,
-      fileName,
+      fileName: baseName,   // keep a nice display name (no folders)
       mimeType: file.type,
       path: tempPath,
     });
@@ -288,14 +296,19 @@ function ensureTempDirectory() {
 function extractFilesFromFormData(formData: FormData): File[] {
   const files: File[] = [];
 
-  // Single file: "file"
-  const primary = formData.get("file");
-  if (primary instanceof File) {
-    files.push(primary);
+  // Single / multiple: "file"
+  const fileEntries = formData.getAll("file");
+  for (const entry of fileEntries) {
+    if (entry instanceof File) {
+      files.push(entry);
+    }
   }
 
-  // Multiple files: "files[]"
-  const multiples = formData.getAll("files[]");
+  // Multiple: "files" or "files[]"
+  const multiples = [
+    ...formData.getAll("files"),
+    ...formData.getAll("files[]"),
+  ];
   for (const entry of multiples) {
     if (entry instanceof File) {
       files.push(entry);

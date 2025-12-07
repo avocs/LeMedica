@@ -57,13 +57,15 @@ http://localhost:3000/admin/clinic-menus/ocr
 
 ## Pending To-Do's: 
 1. UI/UX fix
-    - logo for invalid used for warning lines
-    - not tested that auto create/delete existing feature cuz there is a good chance i wont even need that
+    - logo for invalid lines used for warning lines in summary panel: both should be distinct. 
+    - seems like i have to migrate to a later version of next.js for security
 
         
 2. Backend To-Do's
     - multipage recognition not very strong. could just be this one in particular 
+    - multifile recognition is also dogshit.
     - CHINESE recognition doesnt work yet
+    - need ocr-debugs for single page content as well, not just for multipage.
 
 3. Codebase todo's
     - note that ocr-debugs are created and saved in tmp. set debug flag off once done.

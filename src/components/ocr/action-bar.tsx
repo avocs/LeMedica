@@ -48,8 +48,9 @@ export function ActionBar({
   onUploadToAdmin,
   timestamps,
 }: ActionBarProps) {
-  const [confirmAutoCreate, setConfirmAutoCreate] = useState(false)
-  const [clearExisting, setClearExisting] = useState(false)
+  // disabling these two flags here, dont see a use for them
+  // const [confirmAutoCreate, setConfirmAutoCreate] = useState(false)
+  // const [clearExisting, setClearExisting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [showHeadersTooltip, setShowHeadersTooltip] = useState(false)
 
@@ -61,13 +62,13 @@ export function ActionBar({
     if (allInvalid) {
       setShowConfirmDialog(true)
     } else {
-      onRegenerateCsv({ confirmAutoCreate, clearExisting })
+      onRegenerateCsv({ confirmAutoCreate: false, clearExisting: false })
     }
   }
-
+  
   const handleConfirmRegenerate = () => {
     setShowConfirmDialog(false)
-    onRegenerateCsv({ confirmAutoCreate, clearExisting })
+    onRegenerateCsv({ confirmAutoCreate: false, clearExisting: false })
   }
 
   const formatTime = (date: Date | null) => {
@@ -95,7 +96,7 @@ export function ActionBar({
                         ) : (
                           <>
                             <RefreshCw className="h-4 w-4 mr-2" />
-                            Regenerate CSV
+                            Generate CSV
                           </>
                         )}
                       </Button>
@@ -141,7 +142,7 @@ export function ActionBar({
 
             {/* Right side: Import controls */}
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-4 text-sm">
+              {/* <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <Switch id="confirmAutoCreate" checked={confirmAutoCreate} onCheckedChange={setConfirmAutoCreate} />
                   <Label htmlFor="confirmAutoCreate" className="text-xs">
@@ -154,7 +155,7 @@ export function ActionBar({
                     Clear existing
                   </Label>
                 </div>
-              </div>
+              </div> */}
 
               <TooltipProvider>
                 <Tooltip>
@@ -162,7 +163,7 @@ export function ActionBar({
                     <div>
                       <Button
                         variant="secondary"
-                        onClick={() => onUploadToAdmin({ confirmAutoCreate, clearExisting })}
+                        onClick={() => onUploadToAdmin({ confirmAutoCreate:false, clearExisting:false })}
                         disabled={!csvBlob || isImporting}
                       >
                         {isImporting ? (

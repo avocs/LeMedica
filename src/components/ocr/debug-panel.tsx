@@ -274,7 +274,7 @@ export function DebugPanel({
               <Button variant="ghost" className="w-full justify-between px-0 h-auto hover:bg-transparent">
                 <div className="flex items-center gap-2">
                   <Bug className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-lg font-semibold">Debug & Developer Tools</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Debug Tools</CardTitle>
                   {lastError && (
                     <Badge variant="destructive" className="text-xs">
                       Error

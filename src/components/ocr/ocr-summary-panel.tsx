@@ -49,17 +49,12 @@ export function OcrSummaryPanel({
   }
 
   // Aggregate warnings with invalid flag
-  const warningStats = new Map<string, { count: number; invalidCount: number }>()
+  const warningStats = new Map<string, number>()
 
   for (const pkg of packages) {
-    const validation = validations.get(pkg.id || "")
-    const isInvalid = Boolean(validation && !validation.isValid)
     const warnings = pkg._meta?.warnings || []
     for (const w of warnings) {
-      const existing = warningStats.get(w) || { count: 0, invalidCount: 0 }
-      existing.count += 1
-      if (isInvalid) existing.invalidCount += 1
-      warningStats.set(w, existing)
+      warningStats.set(w, (warningStats.get(w) || 0) + 1)
     }
   }
   // Count packages per source file
@@ -152,25 +147,15 @@ export function OcrSummaryPanel({
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="mt-2 space-y-1 max-h-40 overflow-y-auto rounded-md border bg-amber-500/5 p-2">
-                {Array.from(warningStats.entries()).map(([warning, { count, invalidCount }]) => {
-                  const isInvalidWarning = invalidCount > 0
-                  return (
-                    <div key={warning} className="flex items-start gap-2 text-sm px-2 py-1.5 rounded bg-background">
-                      {isInvalidWarning ? (
-                        <XCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
-                      ) : (
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                      )}
-                      <span className="flex-1">{warning}</span>
-                      <Badge
-                        variant={isInvalidWarning ? "destructive" : "secondary"}
-                        className="text-xs"
-                      >
-                        ×{count}
-                      </Badge>
-                    </div>
-                  )
-                })}
+              {Array.from(warningStats.entries()).map(([warning, count]) => (
+                <div key={warning} className="flex items-start gap-2 text-sm px-2 py-1.5 rounded bg-background">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <span className="flex-1">{warning}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    ×{count}
+                  </Badge>
+                </div>
+              ))}
               </div>
             </CollapsibleContent>
           </Collapsible>
