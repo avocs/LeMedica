@@ -55,6 +55,16 @@ http://localhost:3000
 The OCR admin page lives at:
 http://localhost:3000/admin/clinic-menus/ocr
 
+## UI/UX
+Currently looks like this: 
+![upload](images/upld-panel.png)
+![summary](images/summary-panel.png)
+![extracted](images/extr-pkg-panel.png)
+![debug](images/debug-act-panel.png)
+Saves to a csv: 
+![csvout](images/csv-output.png)
+
+
 ## Pending To-Do's: 
 1. UI/UX fix
     - logo for invalid lines used for warning lines in summary panel: both should be distinct. 
@@ -66,6 +76,7 @@ http://localhost:3000/admin/clinic-menus/ocr
     - multifile recognition is also dogshit.
     - CHINESE recognition doesnt work yet
     - need ocr-debugs for single page content as well, not just for multipage.
+    - not too sure if it is a token limit. but i send in one single page pdf and one multipage pdf as a folder, and the single page pdf did not even bother to be read fully. it extracted two when two pdfs are uploaded together and all of them when it is uploaded on its own. the multipage one is just unable to distinguish packages, perhaps due to low confidence. 
 
 3. Codebase todo's
     - note that ocr-debugs are created and saved in tmp. set debug flag off once done.

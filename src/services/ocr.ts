@@ -163,10 +163,13 @@ export async function runOcrOnFiles(files: SavedFile[]): Promise<OcrPage[]> {
   return pages;
 }
 
+
+// Debugs txts
 async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
   try {
     mkdirSync(OCR_DEBUG_DIR, { recursive: true });
 
+    // Per-page debug files (what you already had)
     for (const page of pages) {
       const safeFile = page.fileName.replace(/[^\w.-]+/g, "_");
       const debugName = `${batchId}_p${page.pageNumber}_${safeFile}.txt`;
@@ -182,14 +185,42 @@ async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
       await fs.writeFile(debugPath, content, "utf8");
     }
 
+    // NEW: aggregated per-file debug (nice for multi-page menus)
+    const pagesByFile = new Map<string, OcrPage[]>();
+    for (const page of pages) {
+      const key = page.fileName;
+      if (!pagesByFile.has(key)) pagesByFile.set(key, []);
+      pagesByFile.get(key)!.push(page);
+    }
+
+    for (const [fileName, filePages] of pagesByFile.entries()) {
+      const safeFile = fileName.replace(/[^\w.-]+/g, "_");
+      const debugName = `${batchId}_FILE_${safeFile}.txt`;
+      const debugPath = join(OCR_DEBUG_DIR, debugName);
+
+      const content =
+        `BATCH: ${batchId}\n` +
+        `FILE:  ${fileName}\n` +
+        `PAGES: ${filePages.length}\n` +
+        `========================================\n\n` +
+        filePages
+          .sort((a, b) => a.pageNumber - b.pageNumber)
+          .map(
+            (p) =>
+              `--- PAGE ${p.pageNumber} ---\n${p.rawText}\n`
+          )
+          .join("\n");
+
+      await fs.writeFile(debugPath, content, "utf8");
+    }
+
     console.log(
-      `[OCR DEBUG] Saved page-level text for batch ${batchId} to ${OCR_DEBUG_DIR}`
+      `[OCR DEBUG] Saved page-level + file-level text for batch ${batchId} to ${OCR_DEBUG_DIR}`
     );
   } catch (err) {
     console.error("[OCR DEBUG] Failed to save snapshot:", err);
   }
 }
-
 
 /**
  * runOcrOnPdf

@@ -1,3 +1,4 @@
+// src/services/aiExtractor.ts
 import type { PackageRow, OcrPage } from "@/lib/types/ocr";
 import { callBedrockForExtraction } from "./bedrockClient";
 import { normalizePackageRow } from "./normalizer";
@@ -5,8 +6,8 @@ import { normalizePackageRow } from "./normalizer";
 /**
  * extractPackagesFromOcrText
  * --------------------------
- * Builds a structured prompt from OCR output, invokes Claude via Bedrock,
- * and returns normalized PackageRow objects ready for CSV serialization.
+ * Groups OCR pages per file, calls Bedrock once per file, and merges
+ * all packages. This avoids one huge prompt across multiple files.
  */
 export async function extractPackagesFromOcrText(
   ocrPages: OcrPage[]
@@ -15,38 +16,75 @@ export async function extractPackagesFromOcrText(
     return [];
   }
 
-  const prompt = buildPrompt(ocrPages);
-  const rawResponse = await callBedrockForExtraction(prompt, {
-    maxTokens: 6000,
-    temperature: 0.1,
-  });
-
-  const cleaned = sanitizeModelResponse(rawResponse);
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleaned || "{}");
-  } catch (err) {
-    // Log a short preview so you can see what Claude actually returned
-    console.error(
-      "[Bedrock OCR] Non-JSON output preview:",
-      rawResponse.slice(0, 500)
-    );
-    console.error("[Bedrock OCR] Cleaned preview:", cleaned.slice(0, 500));
-    throw new Error("Bedrock returned invalid JSON for OCR extraction.");
+  // Group pages by fileId so each Bedrock call only sees one menu/file
+  const pagesByFile = new Map<string, OcrPage[]>();
+  for (const page of ocrPages) {
+    if (!pagesByFile.has(page.fileId)) {
+      pagesByFile.set(page.fileId, []);
+    }
+    pagesByFile.get(page.fileId)!.push(page);
   }
 
-  const packages: any[] = Array.isArray(parsed?.packages) ? parsed.packages : [];
-  return packages.map((row) => normalizePackageRow(row));
+  const allPackages: PackageRow[] = [];
+
+  for (const [fileId, pages] of pagesByFile.entries()) {
+    // sort pages for that file
+    const orderedPages = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
+
+    const prompt = buildPromptForSingleFile(orderedPages);
+    logPromptStats(fileId, prompt);
+
+    const rawResponse = await callBedrockForExtraction(prompt, {
+      maxTokens: 6000,
+      temperature: 0.1,
+    });
+
+    const cleaned = sanitizeModelResponse(rawResponse);
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(cleaned || "{}");
+    } catch (err) {
+      console.error("[Bedrock OCR] Non-JSON output preview:", rawResponse.slice(0, 500));
+      console.error("[Bedrock OCR] Cleaned preview:", cleaned.slice(0, 500));
+      throw new Error("Bedrock returned invalid JSON for OCR extraction.");
+    }
+
+    const packages: any[] = Array.isArray(parsed?.packages) ? parsed.packages : [];
+
+    const fileName = orderedPages[0]?.fileName ?? "unknown-file";
+
+    const normalizedForFile = packages.map((row, index) => {
+      const normalized = normalizePackageRow(row);
+
+      // Ensure _meta exists and has at least source_file/source_page
+      const safeMeta = {
+        ...(normalized._meta || {}),
+        source_file: normalized._meta?.source_file || fileName,
+        // don't guess page, but if model didn't set it we leave it undefined
+      };
+
+      return {
+        ...normalized,
+        id: normalized.id || `pkg_${fileId}_${index}_${Date.now()}`,
+        _meta: safeMeta,
+      } as PackageRow;
+    });
+
+    allPackages.push(...normalizedForFile);
+  }
+
+  return allPackages;
 }
 
-function buildPrompt(pages: OcrPage[]): string {
-  const ordered = [...pages].sort((a, b) => {
-    if (a.fileId === b.fileId) {
-      return a.pageNumber - b.pageNumber;
-    }
-    return a.fileId.localeCompare(b.fileId);
-  });
+/**
+ * buildPromptForSingleFile
+ * ------------------------
+ * Build a prompt for ONE file only (may still be multi-page).
+ */
+function buildPromptForSingleFile(pages: OcrPage[]): string {
+  const ordered = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
+  const mainFileName = ordered[0]?.fileName ?? "Unknown file";
 
   const joinedPages = ordered
     .map(
@@ -59,18 +97,76 @@ function buildPrompt(pages: OcrPage[]): string {
 You are an assistant helping an admin system convert clinic menus into structured package data
 for a bulk CSV upload.
 
+This batch of OCR text comes from a single file:
+- FILE NAME: "${mainFileName}"
+- TOTAL PAGES: ${ordered.length}
+
 The OCR input may:
 - Span multiple pages.
-- Use two-column layouts.
+- Use two or more-column layouts.
 - Mix English, Chinese and regional languages.
+- Contain both prices and non-priced explanatory text.
 
-IMPORTANT:
-- Scan ALL pages and ALL lines.
-- **EVERY clearly priced item must become a separate package**, even inside sections
-  like "Express IV Drips" or "Premium IV Drips".
-- Do NOT stop after the first few items if more prices appear later.
-- Section headers (e.g. "IV DRIP MENU") are NOT packages by themselves unless they
-  clearly show a price and read like a purchasable item.
+IMPORTANT EXTRACTION RULES
+--------------------------
+1. Scan **ALL pages** and **ALL lines** – do NOT stop early.
+2. For this file, **EVERY clearly priced item must become a separate package**, even inside sections
+   like "Express IV Drips", "Premium IV Drips", "IV Vitamin Drips" or "NAD+".
+3. Section headers (e.g. "IV DRIP MENU", "Express IV Drips", "Premium IV Drips") are NOT packages
+   by themselves unless they clearly show a price and read like a purchasable item.
+4. Do not ignore lines just because they are Chinese or bilingual; Chinese-only packages
+   must still be captured as packages.
+
+DENSE LAYOUTS (LIKE EXPRESS / PREMIUM IV DRIPS)
+-----------------------------------------------
+Some menus put many packages into one long paragraph, for example:
+
+  Express IV Drips
+  Hydration Drip £100 Sodium Chloride + Bicarbonate + Potassium + Calcium
+  MultiVit Drip £125 Basic Hydration + B Complex + 2g Vitamin C
+  Energy Drip (Myers Cocktail) £150 Basic Hydration + B Complex + Amino Acids + B12 + Magnesium
+  ...
+
+In these dense layouts, you MUST:
+- Treat **each "package name + price" pair as a separate package**, even if there is no bullet or line break.
+- Typical patterns include:
+  - "<Package Name> £100 ..."
+  - "<Package Name> 150€ ..."
+  - "<Package Name> RM 2,000 ..."
+- Use the price tokens (e.g. "£100", "£125", "£150", "£175", etc.) as hard boundaries between packages.
+- Everything between two price tokens usually belongs to the **preceding** package as description / details / includes.
+
+Examples of text that SHOULD become packages:
+- "Hydration Drip £100 Sodium Chloride + Bicarbonate + Potassium + Calcium"
+- "MultiVit Drip £125 Basic Hydration + B Complex + 2g Vitamin C"
+- "Energy Drip (Myers Cocktail) £150 Basic Hydration + B Complex + Amino Acids + B12 Methylcobalamin + Magnesium"
+- "NAD+ Injection (SC) 60mg £100"
+- "NAD+ Drip (IV) 250mg £250"
+- "Vitamin C (500mg) £30"
+- "Glutathione 600mg £70"
+
+Do **NOT** treat pure explanatory sentences like:
+- "Time needed: approx. 20 mins"
+- "Save £10 and speed up your drip..."
+as packages. These belong in details/description/duration of nearby packages if relevant, or can be ignored.
+
+LOW-CONFIDENCE / AMBIGUOUS ITEMS
+--------------------------------
+Do **NOT** silently drop possible packages just because the layout is messy.
+
+If you see a text fragment that **probably** represents a purchasable drip, injection or add-on,
+but the boundaries are unclear:
+
+- Still create a package.
+- Set \`_meta.confidence_score\` to a low value (e.g. 0.3–0.6).
+- Add one or more warnings in \`_meta.warnings\`, for example:
+  - "Low confidence segmentation: package boundaries may be incorrect"
+  - "Title and description may be mixed from neighbouring items"
+  - "Price attached with low confidence"
+- Only omit text that is clearly not a purchasable item (e.g. disclaimers, headings with no price, general marketing copy).
+
+If you are unsure whether something is a header or a package with price, **prefer to emit it as a package**
+with low \`confidence_score\` and a clear warning, rather than dropping it entirely.
 
 OUTPUT FORMAT
 -------------
@@ -134,7 +230,8 @@ LANGUAGE & TRANSLATION
       - translation_description: description translated to Chinese.
       - translation_details: details translated to Chinese.
   - Set translation to a short language code like "ZH" or "TH->ZH".
-- If the text is unreadable, leave translation_* as "" and add a warning.
+- If the text is unreadable, leave translation_* as "" and add a warning like
+  "OCR text unreadable for this package".
 
 CANONICAL TREATMENT NAMES
 -------------------------
@@ -237,11 +334,10 @@ _Example warnings in _meta.warnings_:
 - "Treatment not recognized: …"
 - "Missing price for package …"
 - "Currency not recognized"
+- "Low confidence segmentation: package boundaries may be incorrect"
 
-CSV header order for reference:
-title,description,details,hospital_name,treatment_name,Sub Treatments,price,original_price,currency,duration,treatment_category,anaesthesia,commission,featured,status,doctor_name,is_le_package,includes,image_file_id,hospital_location,category,hospital_country,translation_title,translation_description,translation_details,translation
-
-OCR INPUT (ALL PAGES):
+OCR INPUT (THIS FILE ONLY, BY PAGE)
+-----------------------------------
 ${joinedPages}
 `;
 }
@@ -251,8 +347,6 @@ ${joinedPages}
  * ---------------------
  * 1. Strips obvious markdown fences (``` / ```json).
  * 2. Trims leading/trailing noise outside the FIRST '{' and LAST '}'.
- *    This protects against Claude adding prose like "I'll help you..."
- *    before the JSON, or extra commentary after it.
  */
 function sanitizeModelResponse(value: string): string {
   if (!value) return "";
@@ -266,7 +360,6 @@ function sanitizeModelResponse(value: string): string {
     .replace(/```$/, "")
     .trim();
 
-  // Grab only the innermost JSON object: from first '{' to last '}'.
   const firstBrace = cleaned.indexOf("{");
   const lastBrace = cleaned.lastIndexOf("}");
 
@@ -275,4 +368,17 @@ function sanitizeModelResponse(value: string): string {
   }
 
   return cleaned;
+}
+
+/**
+ * logPromptStats
+ * --------------
+ * Light logging so you can see if you’re hitting silly prompt sizes.
+ */
+function logPromptStats(fileId: string, prompt: string) {
+  const charCount = prompt.length;
+  const approxTokens = Math.round(charCount / 4); // rough-ish
+  console.log(
+    `[Bedrock OCR] Prompt for file ${fileId}: ${charCount} chars (~${approxTokens} tokens)`
+  );
 }
