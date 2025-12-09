@@ -13,6 +13,8 @@ import { mkdirSync } from "fs";
 import { join } from "path";
 
 const OCR_OUTPUT_DIR = join(process.cwd(), "ocr_outputs");
+export const runtime = "nodejs";
+
 /**
  * POST /api/ocr-menus
  * -------------------

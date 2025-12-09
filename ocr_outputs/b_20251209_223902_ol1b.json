@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "batch_id": "b_20251209_223902_ol1b",
+  "files": [
+    {
+      "file_id": "ddfea764-fa3d-4a22-a6bd-0e8d40dd20a9",
+      "original_name": "wooa-cn1.jpeg",
+      "page_count": 1
+    }
+  ],
+  "packages": [
+    {
+      "title": "EVER WRINKLE 水光 2CC",
+      "description": "水光注射",
+      "details": "10% 附加税",
+      "hospital_name": "WOOA",
+      "treatment_name": "Dermal Fillers",
+      "sub_treatments": "Skin Rejuvenation,Anti-Aging",
+      "price": 11.4,
+      "currency": "USD",
+      "treatment_category": "Cosmetic Procedure",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "hospital_country": "CN",
+      "translation": "ZH",
+      "_meta": {
+        "source_file": "wooa-cn1.jpeg",
+        "source_page": 1,
+        "confidence_score": 0.8,
+        "warnings": [
+          "currency CNY not supported; defaulting to USD",
+          "Hospital not recognized: WOOA",
+          "Hospital not recognized: WOOA"
+        ],
+        "matcher": {
+          "hospitalScore": 0.19999999999999996,
+          "treatmentScore": 1
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "valid": 0,
+    "withWarnings": 1,
+    "invalid": 0
+  }
+}

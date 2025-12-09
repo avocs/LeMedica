@@ -81,8 +81,440 @@ ocr_outputs/                       # (Backend) OCR debug snapshots (JSON)
 csv-outputs/                       # (Backend) generated CSV files
 
 test_menu_1/                       # (Local) sample menus used by test script
-scripts/ or root PowerShell script # PS test runner (curl → APIs)
+
+```
+
+## 3. Data Model
+
+### 3.1 PackageRow (`src/lib/types/ocr.ts`)
+This is the canonical row used end-to-end:
+- Produced by the AI extraction pipeline
+- Edited in the UI
+- Serialized into CSV for the bulk importer
+
+These types are shared between:
+- `page.tsx`
+- `FileUploadPanel`
+- `PackageTable`
+- API client (`ocr-client.ts`)
+
+---
+
+## 4. Frontend Architecture
+
+### 4.1 Main Page – `src/app/admin/clinic-menus/ocr/page.tsx`
+**Component:** `ClinicMenuOcrPage` (top-level React component, client-side)
+
+**Responsibilities:**
+- Owns all React state:
+  - `files: UploadedFile[]`
+  - `packages: PackageRow[]`
+  - `summary: OcrMenusResponse["summary"] | null`
+  - `fileInfos: FileInfo[]`
+  - `batchId: string | null`
+  - `csvBlob: Blob | null`
+  - `validations: Map<string, RowValidation>`
+  - `warningsFilter: "all" | "warnings" | "invalid"`
+  - Debug state: `lastResponse`, `lastError`, `requestDuration`, `timestamps`
+
+- Wires up event handlers:
+  - `handleProcess` → calls `uploadMenus()` → updates `packages`, `summary`, `fileInfos`, `batchId`
+  - `handleUpdatePackage` / `handleDeletePackage` / `handleDuplicatePackage` / `handleAddRow`
+  - `handleRegenerateCsv` → calls `regenerateCsv()` and stores `csvBlob`
+  - `handleDownloadCsv` → triggers file download
+  - `handleUploadToAdmin` → calls `uploadCsvToAdmin()`
+  - `handleApplyJson` → replaces packages from edited JSON
+
+- Child components:
+  - `<FileUploadPanel />`
+  - `<OcrSummaryPanel />`
+  - `<PackageTable />`
+  - `<JsonPreviewPanel />`
+  - `<DebugPanel />`
+  - `<ActionBar />`
+  - `<Toaster />` (global toast provider)
+
+---
+
+### 4.2 File Upload – `src/components/ocr/file-upload-panel.tsx`
+**Responsibilities:**
+- UI for drag-and-drop and file list
+- Uses `ACCEPTED_FILE_TYPES` / `ACCEPTED_FILE_EXTENSIONS` for validation
+- Emits:
+  - `onFilesChange(UploadedFile[])`
+  - `onProcess()` when user clicks *Process menus*
+- Does not talk to backend directly; only manages file-selection UI and sends files upward to `page.tsx`.
+
+---
+
+### 4.3 Summary Panel – `src/components/ocr/ocr-summary-panel.tsx`
+**Inputs:**
+- `summary: OcrMenusResponse["summary"] | null`
+- `packages: PackageRow[]`
+- `files: FileInfo[]`
+- `batchId: string | null`
+- `warningsFilter + onFilterChange`
+
+**Responsibilities:**
+- Show counts:
+  - Total, with warnings, invalid
+- Show batch ID
+- Aggregated warnings across all rows
+- Controls for filtering:
+  - “Show all”
+  - “Warnings only”
+  - “Invalid only”
+
+---
+
+### 4.4 Package Table – `src/components/ocr/package-table.tsx`
+**Inputs:**
+- `packages: PackageRow[]`
+- `validations: Map<string, RowValidation>`
+- `warningsFilter`
+
+**Handlers:** `onUpdate`, `onDelete`, `onDuplicate`, `onAddRow`
+
+**Responsibilities:**
+- Editable grid for `PackageRow[]`
+
+**Column logic:**
+- `ALL_COLUMNS` defines column metadata (label + key)
+- `DEFAULT_VISIBLE_COLUMNS` is initial state (all CSV columns except meta)
+- Column toggling via “Columns” popover
+
+**Cell rendering:**
+- Text inputs (title, description, etc.)
+- Numeric inputs (price, original_price, commission)
+- Selects (status, currency)
+- Checkboxes (featured, is_le_package)
+
+**Validation:**
+- Field-level: `getFieldError` / `isFieldInvalid` (from `lib/validation`)
+- Row-level:
+  - Warning badges (`_meta.warnings`)
+  - Low confidence badge (`_meta.confidence_score < 0.7`)
+  - Row background for invalid rows
+
+**Other features:**
+- Pagination: `itemsPerPage` (default 20)
+- Detail view: `<Sheet>` opens with all fields + translation + meta
+
+---
+
+### 4.5 JSON Preview – `src/components/ocr/json-preview-panel.tsx`
+**Inputs:**
+- `packages: PackageRow[]`
+- `batchId: string | null`
+- `onApplyJson(newPackages: PackageRow[])`
+
+**Responsibilities:**
+- Show pretty-printed JSON for packages
+- “Edit JSON” mode:
+  - Textarea/editor
+  - Parse & validate JSON on submit
+  - Call `onApplyJson` to replace packages in state
+- “Download JSON” button:
+  - Downloads `clinic-menu-packages-<batchId>.json` (or fallback)
+
+---
+
+### 4.6 Action Bar – `src/components/ocr/action-bar.tsx`
+**Inputs:**
+- `packages`
+- `validations`
+- `batchId`
+- `csvBlob`
+- `isRegenerating`
+- `isImporting`
+
+**Handlers:**
+- `onRegenerateCsv`
+- `onDownloadCsv`
+- `onUploadToAdmin`
+- `timestamps` (last OCR, CSV, import)
+
+**Responsibilities:**
+- Persistent bottom bar with:
+  - Regenerate CSV
+  - Download CSV
+  - Import options: `confirmAutoCreate`, `clearExisting`
+  - Upload CSV to Admin
+- Also shows:
+  - Last action timestamps
+  - Quick CSV header info (using `CSV_COLUMNS`)
+
+---
+
+### 4.7 Debug Panel – `src/components/ocr/debug-panel.tsx`
+**Inputs:**
+- `lastResponse: OcrMenusResponse | null`
+- `lastError: { message: string; status?: number; data?: unknown } | null`
+- `requestDuration: number | null`
+
+**Responsibilities:**
+- Display:
+  - Raw last response (trimmed/pretty)
+  - Last API error (message + status + data snippet)
+  - Timing info for last OCR request
+
+---
+
+## 5. Backend: OCR & CSV Pipelines
+
+### 5.1 OCR Upload & AI Extraction – `src/app/api/ocr-menus/route.ts`
+**Endpoint:** `POST /api/ocr-menus`
+
+**Responsibilities:**
+- Parse `multipart/form-data`:
+  - Accepts `file` or `files[]`
+  - Validate file type & size (`ALLOWED_MIME_TYPES`)
+- Save each file to temp folder (`TEMP_DIR`)
+- Generate `fileId` via `randomUUID()`
+- Run OCR: `runOcrOnFiles(savedFiles)` from `services/ocr.ts`
+- Produces `OcrPage[]` (page-level text blobs)
+- Call AI extraction:
+  - Sends `OcrPage[]` to Bedrock (or other LLM) with structured prompt
+  - Returns `PackageRow[]`
+- Add `_meta` fields (source_file, source_page, confidence, warnings)
+- Construct response:
+  - `batch_id` via `generateFriendlyBatchId()`
+  - `files: FileInfo[]`
+  - `summary: { total, valid, withWarnings, invalid }`
+  - `success: true`
+- (Optional) `OCR_DEBUG_ENABLED`: save debug snapshot into `ocr_outputs/`
+
+---
+
+### 5.2 Tesseract Wrapper – `services/ocr.ts`
+**Responsibilities:**
+- Wrap `Tesseract.recognize` safely:
+  - Timeouts via `OCR_TIMEOUT_MS`
+  - Language config via `OCR_LANGS`
+  - Disable PDF output (`tessjs_create_pdf: "0"`)
+- Return clean string text for each page
+- Attach file/page metadata into `OcrPage`
+
+---
+
+### 5.3 Normalization & CSV – `services/normalizer.ts` & `services/csvGenerator.ts`
+**Function:** `normalizePackageRow(pkg: PackageRow): PackageRow`
+- Ensure required fields are not undefined
+- Defaults: `featured = false`, `status = "active"`, `is_le_package = false`
+- Trim strings
+- Normalize numeric values
+- Provide consistent shape for CSV generation
+
+**Function:** `generateBulkCsv(rows: PackageRow[]): string`
+- Emit CSV with exact header sequence required by bulk importer:
+  ```
+  title,description,details,hospital_name,treatment_name,Sub Treatments,price,original_price,currency,duration,treatment_category,anaesthesia,commission,featured,status,doctor_name,is_le_package,includes,image_file_id,hospital_location,category,hospital_country,translation_title,translation_description,translation_details,translation
+  ```
+- Serialize each row according to that order
+- Handle null/undefined values cleanly
+
+---
+
+## 6. Backend: CSV Regeneration & Import
+
+### 6.1 Regenerate CSV – `src/app/api/ocr-menus/regenerate-csv/route.ts`
+**Endpoint:** `POST /api/ocr-menus/regenerate-csv`
+
+**Request:**
+- Either:
+  - `{ packages: PackageRow[] }`
+  - Full OCR response `{ success, batch_id, files, packages, summary }`
+- Optional:
+  - `forwardToImporter?: boolean`
+  - `confirmAutoCreate?: boolean`
+  
+
+### 6.2 Forwarding to Bulk Importer – forwardCsvToImporter(...)
+Function: 
+```ts
+async function forwardCsvToImporter(
+  csvContent: string,
+  options: { confirmAutoCreate?: boolean; clearExisting?: boolean }
+): Promise<string>
+```
+
+- **Responsibilities:** Builds importer URL and posts CSV for bulk import.
+- **Importer URL sources:**
+  - **Env:** `process.env.BULK_IMPORT_ENDPOINT`
+  - **Base URL:** `APP_BASE_URL + /api/admin/bulk-import-packages`
+  - **Default:** `http://localhost:3000/api/admin/bulk-import-packages`
+- **FormData payload:**
+  - **file:** CSV as Blob
+  - **confirmAutoCreate:** Optional flag
+  - **clearExisting:** Optional flag
+- **Returns:**
+  - **Success:** `"success"` on 2xx
+  - **Failure:** `"failed:<reason>"` on error
+
+---
+
+### 6.3 Admin Import Endpoint – /api/admin/bulk-import-packages
+- **Status:** Existing endpoint (not modified here)
+- **Input:** CSV matching the bulk-upload spec
+- **Responsibilities:**
+  - **Validate CSV**
+  - **Create/update packages**
+- **UI note:** Shows a Compatibility warning banner until importer rules are verified (OCR output may differ).
+
+---
+
+## 7. Frontend API Client – src/lib/api/ocr-client.ts
+- **Role:** Thin typed wrapper around backend routes.
+- **Routes used:**
+  - **Upload OCR:** `/api/ocr-menus`
+  - **Regenerate CSV:** `/api/ocr-menus/regenerate-csv`
+  - **Admin import:** `/api/admin/bulk-import-packages`
+- **Error handling:** Throws `OcrApiError` with debug-friendly message and parsed error JSON.
+- **UI integration:** `page.tsx` consumes these to show toasts and populate the Debug Panel.
+
+---
+
+## 8. Validation & Fuzzy Matching – src/lib/validation.ts
+
+- **Responsibilities:** Fuzzy matching + client-side validation for `PackageRow`.
+- **Matching data:** Curated lists (`HOSPITAL_NAMES`, `TREATMENT_NAMES`)
+- **Algorithms:**
+  - **normalize(value)**
+  - **levenshtein(a, b)**
+  - **similarityScore(source, candidate)**
+- **APIs exposed:**
+  - **matchHospitalName(raw)**
+  - **matchTreatmentName(raw)**
+- **Meta effects:** Populates `_meta.matcher` scores and warnings.
+
+- **Client-side validation:**
+  - **validateRow(row):** Returns `RowValidation`
+  - **validateAllRows(rows):** Returns `validations: Map` and `summary`
+  - **getFieldError(...):** Returns `string | undefined`
+  - **isFieldInvalid(...):** Returns `boolean`
+
+- **Rules:**
+  - **Required fields:** `title`, `hospital_name`, `treatment_name`, `price`, `currency`
+  - **Numeric ranges:** `commission` between 0 and 100; `original_price >= 0`
+  - **Row IDs:** Adds UI-only `rowId` and assigns `row.id` if missing
+
+- **Usage:**
+  - **Sync:** `page.tsx` calls `validateAllRows` in a `useEffect` to keep UI and summary in sync when `packages` change.
+
+---
+
+## 9. Debugging & Test Harness
+
+### 9.1 OCR Debug Snapshots – ocr_outputs/
+- **When enabled:** `OCR_DEBUG_ENABLED`
+- **Writes:**
+  - **Raw pages:** `OcrPage[]` per page text
+  - **LLM context:** Prompts/responses (if implemented)
+- **Use cases:**
+  - **Trace misses:** If OCR missed content
+  - **Explain extraction:** Why AI extraction ignored lines
+
+### 9.2 CSV Outputs – csv-outputs/
+- **Source:** `POST /api/ocr-menus/regenerate-csv`
+- **File naming:**
+  - **Batch-based:** `batch_<timestamp>_<suffix>.csv` (e.g., `batch_20251205_111900_amgv.csv`)
+  - **Explicit:** `fileName` from the request
+- **Benefits:**
+  - **Compare:** CSV vs importer input
+  - **Artifacts:** Keep per-run files for rollback and debugging
 
 
+# Clinic Menu OCR → CSV Backend Architecture
+_NOTE:_ as of 05/12 this is outdated still
 
+http://localhost:3000/admin/clinic-menus/ocr 
+
+## High-Level Flow
+
+```
+Frontend (medical-records/MedicalRecordsView.tsx or v0 Admin UI)
+  -> POST /api/ocr-menus  (FormData { file | files[] })
+      -> handleUploadAndExtractOcr (src/services/ocr.ts)
+      -> extractPackagesFromOcrText (src/services/aiExtractor.ts)
+          -> callBedrockForExtraction (src/services/bedrockClient.ts)
+      -> normalizePackageRow + validatePackageBatch (src/services/normalizer.ts)
+      -> Response: { batch_id, files, packages, summary }
+
+Frontend (after manual edits)
+  -> POST /api/ocr-menus/regenerate-csv  (JSON { packages })
+      -> normalizePackageRow
+      -> generateBulkCsv (src/services/csvGenerator.ts)
+      -> Optional forward to /api/admin/bulk-import-packages
+      -> Response: text/csv stream
+
+Frontend (debugging)
+  -> POST /api/ocr-menus/preview-csv
+      -> normalizePackageRow
+      -> generateBulkCsv
+      -> Response: { csv_content }
+```
+
+## File-by-File Guide
+
+- `medical-records/medical-records/PDFProcessor.tsx`  
+  Client-side PDF helper that already produces the `FormData` contract (`file` or `files[]`) reused by `/api/ocr-menus`. No code change is required; point uploads at `/api/ocr-menus`.
+
+- `medical-records/medical-records/MedicalRecordsView.tsx`  
+  Existing UI that will call the OCR endpoint. When adding clinic-menu upload actions, POST the `FormData` to `/api/ocr-menus`.
+
+- `medical-records/medical-records/page.tsx`  
+  Wrapper that renders the view; no backend logic but referenced here for navigation.
+
+- `bedrock-config.ts/bedrock-config.ts`  
+  Centralized AWS Bedrock client configuration. The OCR pipeline imports `bedrockClient` and the Claude model IDs from here to avoid duplicating credentials or model names.
+
+- `src/types/packages.ts`  
+  Declares `OcrPage` and `PackageRow` with detailed comments so every service shares the same shape. Update this file when the CSV schema evolves.
+
+- `src/lib/matching.ts`  
+  Fuzzy-matching helpers for hospital and treatment names using the whitelists documented in `BULK_CSV_UPLOAD_GUIDE.md`. `normalizePackageRow` relies on these helpers to auto-correct OCR drift.
+
+- `src/services/ocr.ts`  
+  Owns multipart parsing, file validation, temp storage (`tmp/ocr-uploads`), PDF/page rendering, and Tesseract OCR. Exported helpers:
+  - `handleUploadAndExtractOcr(req: NextRequest)`
+  - `runOcrOnFiles(files: SavedFile[])`
+
+- `src/services/aiExtractor.ts`  
+  Builds the long-form Claude prompt, calls Bedrock, strips markdown fences, and normalizes the AI output. Export:
+  - `extractPackagesFromOcrText(ocrPages: OcrPage[])`
+
+- `src/services/bedrockClient.ts`  
+  Thin wrapper over `bedrock-config.ts` that exposes `callBedrockForExtraction(prompt, options)`. Handles inference profile resolution and response decoding.
+
+- `src/services/normalizer.ts`  
+  Contains:
+  - `normalizePackageRow(row)` – trims strings, parses numbers, enforces currency codes, default booleans, and captures warnings.
+  - `validatePackageBatch(rows)` – splits results into valid / warnings / invalid buckets to help the UI.
+
+- `src/services/csvGenerator.ts`  
+  Serializes normalized rows into the exact header order described in `BULK_CSV_UPLOAD_GUIDE.md`. Functions:
+  - `toBulkCsvRow(row)`
+  - `generateBulkCsv(rows)`
+
+- `src/app/api/ocr-menus/route.ts`  
+  Main OCR pipeline endpoint. Accepts `FormData` (keys: `file` for single uploads, `files[]` for multi) and returns `{ packages, summary }`. **URL to call:** `/api/ocr-menus` (POST).
+
+- `src/app/api/ocr-menus/regenerate-csv/route.ts`  
+  Accepts `{ packages }` JSON, regenerates CSV, and optionally forwards the CSV to `/api/admin/bulk-import-packages`. Responds with `text/csv`. **URL:** `/api/ocr-menus/regenerate-csv` (POST).
+
+- `src/app/api/ocr-menus/preview-csv/route.ts`  
+  Debug endpoint returning `{ csv_content }` JSON for quick previews. **URL:** `/api/ocr-menus/preview-csv` (POST).
+
+- `BULK_CSV_UPLOAD_GUIDE.md`  
+  Source of truth for CSV headers, allowed values, and descriptions. Referenced when validating and matching data.
+
+## Routing Cheat Sheet
+
+| Endpoint | Method | Purpose | Body |
+|----------|--------|---------|------|
+| `/api/ocr-menus` | POST | Upload PDF/image, run OCR + AI, return structured packages | `FormData` with `file` (single) or `files[]` (multi) |
+| `/api/ocr-menus/regenerate-csv` | POST | Convert edited PackageRow[] into CSV (stream) and optionally forward to importer | JSON `{ packages: PackageRow[], forwardToImporter?: boolean }` |
+| `/api/ocr-menus/preview-csv` | POST | Same as regenerate but returns CSV inside JSON for debugging | JSON `{ packages: PackageRow[] }` |
+
+Always ensure your frontend points to these paths exactly to avoid 404s. After adding or modifying API routes, restart `next dev` so App Router picks up the new `route.ts` files.
 

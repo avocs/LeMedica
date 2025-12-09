@@ -1,0 +1,147 @@
+{
+  "success": true,
+  "batch_id": "b_20251209_214025_u9uf",
+  "files": [
+    {
+      "file_id": "d7783c72-9638-45fb-8150-fbfd0c5e8f6e",
+      "original_name": "booster-cn-1.jpeg",
+      "page_count": 1
+    }
+  ],
+  "packages": [
+    {
+      "title": "丽珠兰黑盒2cc + 水光针2.5cc",
+      "description": "Skin booster package with Rejuran black box and hydration injection",
+      "details": "丽珠兰黑盒2cc + 水光针2.5cc",
+      "hospital_name": "",
+      "treatment_name": "Skin Rejuvenation",
+      "sub_treatments": "Skin Booster,Hydration Injection",
+      "price": 290000,
+      "currency": "KRW",
+      "treatment_category": "Cosmetic",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "Rejuran Black Box,Hydration Injection",
+      "category": "Skin Treatment",
+      "translation_title": "丽珠兰黑盒2cc + 水光针2.5cc",
+      "translation": "ZH",
+      "_meta": {
+        "source_file": "booster-cn-1.jpeg",
+        "source_page": 1,
+        "confidence_score": 0.8,
+        "warnings": [
+          "Treatment not recognized: Skin Rejuvenation",
+          "Treatment not recognized: Skin Rejuvenation",
+          "Missing required fields: hospital_name"
+        ],
+        "matcher": {
+          "treatmentScore": 0.5
+        }
+      }
+    },
+    {
+      "title": "眼部丽珠兰1cc + 眼角肉毒",
+      "description": "Eye area Rejuran with botox treatment",
+      "details": "眼部丽珠兰1cc + 眼角肉毒",
+      "hospital_name": "",
+      "treatment_name": "Skin Rejuvenation",
+      "sub_treatments": "Eye Treatment,Botox",
+      "price": 450000,
+      "currency": "KRW",
+      "treatment_category": "Cosmetic",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "Rejuran,Botox",
+      "category": "Skin Treatment",
+      "translation_title": "眼部丽珠兰1cc + 眼角肉毒",
+      "translation": "ZH",
+      "_meta": {
+        "source_file": "booster-cn-1.jpeg",
+        "source_page": 1,
+        "confidence_score": 0.8,
+        "warnings": [
+          "Treatment not recognized: Skin Rejuvenation",
+          "Treatment not recognized: Skin Rejuvenation",
+          "Missing required fields: hospital_name"
+        ],
+        "matcher": {
+          "treatmentScore": 0.5
+        }
+      }
+    },
+    {
+      "title": "颈纹 inmode FORMA + 微滴内毒",
+      "description": "Neck wrinkle treatment with inmode FORMA and micro-injection",
+      "details": "颈纹 inmode FORMA + 微滴内毒",
+      "hospital_name": "",
+      "treatment_name": "Skin Rejuvenation",
+      "sub_treatments": "Neck Wrinkle Treatment,Micro-injection",
+      "price": 250000,
+      "original_price": 350000,
+      "currency": "KRW",
+      "treatment_category": "Cosmetic",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "Inmode FORMA,Micro-injection",
+      "category": "Neck Treatment",
+      "translation_title": "颈纹 inmode FORMA + 微滴内毒",
+      "translation": "ZH",
+      "_meta": {
+        "source_file": "booster-cn-1.jpeg",
+        "source_page": 1,
+        "confidence_score": 0.7,
+        "warnings": [
+          "Price may vary with imported botox",
+          "Treatment not recognized: Skin Rejuvenation",
+          "Treatment not recognized: Skin Rejuvenation",
+          "Missing required fields: hospital_name"
+        ],
+        "matcher": {
+          "treatmentScore": 0.5
+        }
+      }
+    },
+    {
+      "title": "颈纹玻尿酸(保柔绳)1cc + MANS",
+      "description": "Neck wrinkle treatment with hyaluronic acid and MANS",
+      "details": "颈纹玻尿酸(保柔绳)1cc + MANS",
+      "hospital_name": "",
+      "treatment_name": "Skin Rejuvenation",
+      "sub_treatments": "Neck Wrinkle Treatment,Hyaluronic Acid",
+      "price": 690000,
+      "original_price": 790000,
+      "currency": "KRW",
+      "treatment_category": "Cosmetic",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "Hyaluronic Acid,MANS Treatment",
+      "category": "Neck Treatment",
+      "translation_title": "颈纹玻尿酸(保柔绳)1cc + MANS",
+      "translation": "ZH",
+      "_meta": {
+        "source_file": "booster-cn-1.jpeg",
+        "source_page": 1,
+        "confidence_score": 0.7,
+        "warnings": [
+          "Price may vary with imported botox",
+          "Treatment not recognized: Skin Rejuvenation",
+          "Treatment not recognized: Skin Rejuvenation",
+          "Missing required fields: hospital_name"
+        ],
+        "matcher": {
+          "treatmentScore": 0.5
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "valid": 0,
+    "withWarnings": 0,
+    "invalid": 4
+  }
+}

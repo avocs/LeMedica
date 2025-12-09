@@ -1,7 +1,13 @@
 # There was an attempt
+in my defense ive not worked with api's before ....and im on free ver of cursor
+
 ## Local Development – Quick Start
 
 This project is a Next.js 14 + TypeScript app using Tailwind CSS, shadcn/ui, and a custom Clinic Menu OCR → CSV admin tool.
+
+## Architecture
+Refer to `ARCHITECTURE.md`
+Prompt to Claude called in `src\services\aiExtractor.ts`
 
 ### Prerequisites
 
@@ -69,16 +75,11 @@ Saves to a csv:
 1. UI/UX fix
     - logo for invalid lines used for warning lines in summary panel: both should be distinct. 
     - seems like i have to migrate to a later version of next.js for security
-
         
 2. Backend To-Do's
     - multipage recognition not very strong. could just be this one in particular 
     - multifile recognition is also dogshit.
-    - CHINESE recognition doesnt work yet
-    - need ocr-debugs for single page content as well, not just for multipage.
-    - not too sure if it is a token limit. but i send in one single page pdf and one multipage pdf as a folder, and the single page pdf did not even bother to be read fully. it extracted two when two pdfs are uploaded together and all of them when it is uploaded on its own. the multipage one is just unable to distinguish packages, perhaps due to low confidence. 
 
 3. Codebase todo's
     - note that ocr-debugs are created and saved in tmp. set debug flag off once done.
     - check if theres anything that can be done about the many files thats cluttering the workspace
-    - please update architecture.md

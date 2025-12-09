@@ -1,0 +1,83 @@
+{
+  "success": true,
+  "batch_id": "b_20251209_124754_0gx5",
+  "files": [
+    {
+      "file_id": "7e111883-1b7f-4d7f-98b7-16d95804fa15",
+      "original_name": "Wellness-Clinic-Menu-V4-ONLINE.pdf",
+      "page_count": 8
+    }
+  ],
+  "packages": [
+    {
+      "title": "Hydration Drip",
+      "description": "Sodium Chloride + Bicarbonate + Potassium + Calcium",
+      "details": "Basic hydration drip with essential electrolytes",
+      "hospital_name": "Get A Drip",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Hydration,Electrolyte Replacement",
+      "price": 100,
+      "currency": "GBP",
+      "duration": "20 mins",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "Sodium Chloride,Bicarbonate,Potassium,Calcium",
+      "hospital_location": "King's Road",
+      "category": "IV Drips",
+      "hospital_country": "UK",
+      "_meta": {
+        "source_file": "Wellness-Clinic-Menu-V4-ONLINE.pdf",
+        "source_page": 3,
+        "confidence_score": 1,
+        "warnings": [
+          "Hospital not recognized: Get A Drip",
+          "Hospital not recognized: Get A Drip"
+        ],
+        "matcher": {
+          "hospitalScore": 0.25,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "MultiVit Drip",
+      "description": "Basic Hydration + B Complex + 2g Vitamin C",
+      "details": "Comprehensive multivitamin IV drip",
+      "hospital_name": "Get A Drip",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Hydration,Vitamin Supplementation",
+      "price": 125,
+      "currency": "GBP",
+      "duration": "20 mins",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "Basic Hydration,B Complex,Vitamin C",
+      "hospital_location": "King's Road",
+      "category": "IV Drips",
+      "hospital_country": "UK",
+      "_meta": {
+        "source_file": "Wellness-Clinic-Menu-V4-ONLINE.pdf",
+        "source_page": 3,
+        "confidence_score": 1,
+        "warnings": [
+          "Hospital not recognized: Get A Drip",
+          "Hospital not recognized: Get A Drip"
+        ],
+        "matcher": {
+          "hospitalScore": 0.25,
+          "treatmentScore": 1
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "valid": 0,
+    "withWarnings": 2,
+    "invalid": 0
+  }
+}

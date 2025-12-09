@@ -3,15 +3,13 @@ import { mkdirSync } from "fs";
 import { NextRequest } from "next/server";
 import { join } from "path";
 import { randomUUID } from "crypto";
-import Tesseract from "tesseract.js";
+import { createWorker } from "tesseract.js"; 
 import pdfParse from "pdf-parse";
 import type { OcrPage } from "@/lib/types/ocr";
-
 
 const OCR_DEBUG_DIR = join(process.cwd(), "tmp", "ocr-debug");
 // Toggle with an env var so prod isn’t spammed
 const OCR_DEBUG_ENABLED = process.env.OCR_DEBUG === "1";
-
 
 const TEMP_DIR = join(process.cwd(), "tmp", "ocr-uploads");
 const MAX_FILE_SIZE_BYTES =
@@ -27,18 +25,12 @@ const ALLOWED_MIME_TYPES = new Set([
 // -----------------------------------------------------------------------------
 // OCR language + timeout config
 // -----------------------------------------------------------------------------
-// Languages for Tesseract OCR. Override via .env.local, e.g.
-//   OCR_LANGS=eng+chi_sim
-//   OCR_LANGS=eng+chi_sim+tha+ms
-//
-// IMPORTANT: More languages = heavier + slower. For Chinese-heavy menus, try:
-//   OCR_LANGS=eng+chi_sim
-//
-const OCR_LANGS = process.env.OCR_LANGS || "eng+chi_sim+tha+ms+kor";
+// Languages for Tesseract OCR.
+// IMPORTANT: More languages = heavier + slower.
+const OCR_LANGS = "eng+chi_sim";
 
-// Max time (ms) we are willing to wait for a single Tesseract.recognize() call.
-// Prevents "Chinese JPEG runs forever" hangs.
-const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS || 60000);
+// Max time (ms) we are willing to wait for a single OCR call.
+const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS || 150000);
 
 /**
  * handleUploadAndExtractOcr
@@ -66,7 +58,7 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
   if (!incomingFiles.length) {
     throw createHttpError(
       400,
-      "No file provided. Please append `file` or `files[]` to FormData."
+      "No file provided. Please append `file` or `files[]` to FormData.",
     );
   }
 
@@ -76,15 +68,15 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
       throw createHttpError(
         400,
-        "Unsupported file type. Please upload PDF, JPG, PNG, or HEIC."
+        "Unsupported file type. Please upload PDF, JPG, PNG, or HEIC.",
       );
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
       throw createHttpError(
         413,
         `File exceeds the maximum allowed size of ${Math.round(
-          MAX_FILE_SIZE_BYTES / (1024 * 1024)
-        )} MB.`
+          MAX_FILE_SIZE_BYTES / (1024 * 1024),
+        )} MB.`,
       );
     }
 
@@ -104,7 +96,7 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
 
     savedFiles.push({
       fileId,
-      fileName: baseName,   // keep a nice display name (no folders)
+      fileName: baseName, // keep a nice display name (no folders)
       mimeType: file.type,
       path: tempPath,
     });
@@ -119,12 +111,11 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
   }
 
   return {
-    batchId,      // reuse the same batchId here
+    batchId, // reuse the same batchId here
     ocrPages,
     filesMeta,
   };
 }
-
 
 type SavedFile = {
   fileId: string;
@@ -163,13 +154,12 @@ export async function runOcrOnFiles(files: SavedFile[]): Promise<OcrPage[]> {
   return pages;
 }
 
-
 // Debugs txts
 async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
   try {
     mkdirSync(OCR_DEBUG_DIR, { recursive: true });
 
-    // Per-page debug files (what you already had)
+    // Per-page debug files
     for (const page of pages) {
       const safeFile = page.fileName.replace(/[^\w.-]+/g, "_");
       const debugName = `${batchId}_p${page.pageNumber}_${safeFile}.txt`;
@@ -185,7 +175,7 @@ async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
       await fs.writeFile(debugPath, content, "utf8");
     }
 
-    // NEW: aggregated per-file debug (nice for multi-page menus)
+    // Aggregated per-file debug
     const pagesByFile = new Map<string, OcrPage[]>();
     for (const page of pages) {
       const key = page.fileName;
@@ -205,17 +195,14 @@ async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
         `========================================\n\n` +
         filePages
           .sort((a, b) => a.pageNumber - b.pageNumber)
-          .map(
-            (p) =>
-              `--- PAGE ${p.pageNumber} ---\n${p.rawText}\n`
-          )
+          .map((p) => `--- PAGE ${p.pageNumber} ---\n${p.rawText}\n`)
           .join("\n");
 
       await fs.writeFile(debugPath, content, "utf8");
     }
 
     console.log(
-      `[OCR DEBUG] Saved page-level + file-level text for batch ${batchId} to ${OCR_DEBUG_DIR}`
+      `[OCR DEBUG] Saved page-level + file-level text for batch ${batchId} to ${OCR_DEBUG_DIR}`,
     );
   } catch (err) {
     console.error("[OCR DEBUG] Failed to save snapshot:", err);
@@ -227,9 +214,6 @@ async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
  * -----------
  * Uses pdf-parse to extract text per page.
  * If pdf-parse returns nothing, we still emit one empty page entry.
- *
- * NOTE: This path is text-based; if you need image-based PDF OCR later,
- * you can add a Tesseract fallback here that rasterizes pages.
  */
 async function runOcrOnPdf(file: SavedFile): Promise<OcrPage[]> {
   const buffer = await fs.readFile(file.path);
@@ -259,8 +243,7 @@ async function runOcrOnPdf(file: SavedFile): Promise<OcrPage[]> {
       .forEach((chunk) => pageTexts.push(chunk));
   }
 
-  // Still nothing? Emit a single empty page so the AI has the context of
-  // "file exists but OCR returned no text".
+  // Still nothing? Emit a single empty page
   if (!pageTexts.length) {
     pageTexts.push("");
   }
@@ -276,33 +259,40 @@ async function runOcrOnPdf(file: SavedFile): Promise<OcrPage[]> {
 /**
  * runTesseract
  * ------------
- * Runs Tesseract OCR on an image buffer using the languages configured
- * by OCR_LANGS (default: eng+chi_sim+tha+ms+kor).
- *
- * Make sure you have the corresponding .traineddata files installed
- * if you are using a native Tesseract installation. For tesseract.js,
- * it will download language data from the CDN on first use.
- *
- * A safety timeout (OCR_TIMEOUT_MS) is applied so a problematic image
- * doesn’t hang the entire request indefinitely.
+ * Uses a Tesseract.js worker with an explicit workerPath so it
+ * doesn't try to load from `.next/worker-script/...`.
  */
 async function runTesseract(buffer: Buffer): Promise<string> {
-  const recognizePromise = Tesseract.recognize(buffer, OCR_LANGS);
+  // 🔹 Point directly at the Node worker in node_modules
+  const worker = await createWorker(OCR_LANGS,1,{workerPath: "./node_modules/tesseract.js/src/worker-script/node/index.js"});
 
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(
-      () =>
-        reject(
-          new Error(
-            `Tesseract OCR timed out after ${OCR_TIMEOUT_MS} ms (languages: ${OCR_LANGS})`,
+
+  try {
+
+    const recognizePromise = worker.recognize(buffer);
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Tesseract OCR timed out after ${OCR_TIMEOUT_MS} ms (languages: ${OCR_LANGS})`,
+            ),
           ),
-        ),
-      OCR_TIMEOUT_MS,
-    );
-  });
+        OCR_TIMEOUT_MS,
+      );
+    });
 
-  const result = await Promise.race([recognizePromise, timeoutPromise]);
-  return result.data?.text || "";
+    const result: any = await Promise.race([recognizePromise, timeoutPromise]);
+    return result.data?.text || "";
+  } finally {
+    // Ensure worker is cleaned up even on timeout/error
+    try {
+      await worker.terminate();
+    } catch {
+      // ignore
+    }
+  }
 }
 
 /**
@@ -313,10 +303,10 @@ async function runTesseract(buffer: Buffer): Promise<string> {
  */
 function cleanText(text: string): string {
   return text
-    .replace(/\r\n/g, "\n")      // normalise Windows line endings
+    .replace(/\r\n/g, "\n") // normalise Windows line endings
     .replace(/\r/g, "\n")
-    .replace(/[ \t]+/g, " ")     // collapse spaces/tabs
-    .replace(/\n{2,}/g, "\n")    // collapse multiple blank lines
+    .replace(/[ \t]+/g, " ") // collapse spaces/tabs
+    .replace(/\n{2,}/g, "\n") // collapse multiple blank lines
     .trim();
 }
 
@@ -336,10 +326,7 @@ function extractFilesFromFormData(formData: FormData): File[] {
   }
 
   // Multiple: "files" or "files[]"
-  const multiples = [
-    ...formData.getAll("files"),
-    ...formData.getAll("files[]"),
-  ];
+  const multiples = [...formData.getAll("files"), ...formData.getAll("files[]")];
   for (const entry of multiples) {
     if (entry instanceof File) {
       files.push(entry);

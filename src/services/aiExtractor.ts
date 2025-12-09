@@ -94,89 +94,100 @@ function buildPromptForSingleFile(pages: OcrPage[]): string {
     .join("\n");
 
   return `
-You are an assistant helping an admin system convert clinic menus into structured package data
-for a bulk CSV upload.
+You are a backend extraction worker. Convert clinic menu OCR text into structured JSON for bulk CSV upload.
 
-This batch of OCR text comes from a single file:
+IMPORTANT: This is a **tool call**, not a chat.  
+- Do NOT ask questions.  
+- Do NOT explain your reasoning.  
+- Do NOT comment on missing pages or placeholders.  
+- **Return ONLY a single JSON object** as described below.
+
+FILE CONTEXT
+------------
 - FILE NAME: "${mainFileName}"
 - TOTAL PAGES: ${ordered.length}
 
-The OCR input may:
-- Span multiple pages.
-- Use two or more-column layouts.
-- Mix English, Chinese and regional languages.
-- Contain both prices and non-priced explanatory text.
+Some pages may be empty or have weak OCR; just skip non-usable text without commenting on it.
 
-IMPORTANT EXTRACTION RULES
---------------------------
-1. Scan **ALL pages** and **ALL lines** – do NOT stop early.
-2. For this file, **EVERY clearly priced item must become a separate package**, even inside sections
-   like "Express IV Drips", "Premium IV Drips", "IV Vitamin Drips" or "NAD+".
-3. Section headers (e.g. "IV DRIP MENU", "Express IV Drips", "Premium IV Drips") are NOT packages
-   by themselves unless they clearly show a price and read like a purchasable item.
-4. Do not ignore lines just because they are Chinese or bilingual; Chinese-only packages
-   must still be captured as packages.
+GLOBAL EXTRACTION RULES
+-----------------------
+1. Scan ALL pages and ALL lines that contain text.
+2. **EVERY clearly priced item is a separate package**, even inside sections like:
+   - IV drips (e.g. "Signature Drip", "Express IV Drips", "Premium IV Drips")
+   - Vitamin drips / injections
+   - Session-based services (Compression Therapy, Red Light Therapy, Hyperbaric Oxygen Therapy, Infrared Sauna, etc.)
+3. A line/block is a package if it has:
+   - a name/title, AND
+   - a price (e.g. "£100", "£25", "RM 1,500").
+4. Section headings with NO price are NOT packages.
+5. Do NOT ignore non-English or bilingual lines; Chinese/Thai-only packages are still valid.
+6. If you are unsure whether something is a package, **prefer to include it** with low confidence instead of silently dropping it.
 
-DENSE LAYOUTS (LIKE EXPRESS / PREMIUM IV DRIPS)
------------------------------------------------
-Some menus put many packages into one long paragraph, for example:
+DENSE MENUS
+----------------
+For dense text like:
 
-  Express IV Drips
-  Hydration Drip £100 Sodium Chloride + Bicarbonate + Potassium + Calcium
+  Signature Drip ... £450
+  Limitless Drip ... £850
+  Hydration Drip £100 Sodium Chloride + Bicarbonate + ...
   MultiVit Drip £125 Basic Hydration + B Complex + 2g Vitamin C
-  Energy Drip (Myers Cocktail) £150 Basic Hydration + B Complex + Amino Acids + B12 + Magnesium
   ...
 
-In these dense layouts, you MUST:
-- Treat **each "package name + price" pair as a separate package**, even if there is no bullet or line break.
-- Typical patterns include:
-  - "<Package Name> £100 ..."
-  - "<Package Name> 150€ ..."
-  - "<Package Name> RM 2,000 ..."
-- Use the price tokens (e.g. "£100", "£125", "£150", "£175", etc.) as hard boundaries between packages.
-- Everything between two price tokens usually belongs to the **preceding** package as description / details / includes.
+You must:
+- Treat each **"name ... £price"** as its own package.
+- Use price tokens (£100, £125, £150, £175, £200, £225, £450, £850, etc.) as strong boundaries between packages.
+- Use the text immediately around the name as:
+  - title       → main package name (e.g. "Hydration Drip", "Energy Drip (Myers Cocktail)")
+  - description/details/includes → compositions, ingredients, or extra info.
 
-Examples of text that SHOULD become packages:
-- "Hydration Drip £100 Sodium Chloride + Bicarbonate + Potassium + Calcium"
-- "MultiVit Drip £125 Basic Hydration + B Complex + 2g Vitamin C"
-- "Energy Drip (Myers Cocktail) £150 Basic Hydration + B Complex + Amino Acids + B12 Methylcobalamin + Magnesium"
-- "NAD+ Injection (SC) 60mg £100"
-- "NAD+ Drip (IV) 250mg £250"
-- "Vitamin C (500mg) £30"
-- "Glutathione 600mg £70"
+SERVICE + SESSION BUNDLES
+-------------------------
+For bundles like:
 
-Do **NOT** treat pure explanatory sentences like:
-- "Time needed: approx. 20 mins"
-- "Save £10 and speed up your drip..."
-as packages. These belong in details/description/duration of nearby packages if relevant, or can be ignored.
+  Compression Therapy ...
+  Intro Session (first time only) £10
+  1 Session £25
+  5 Sessions £110
+  10 Sessions £190
+
+  Red Light Therapy from £55
+  1 x Session £55
+  5 x Sessions £220
+  ...
+
+You must:
+- Create a separate package for each **session + price** line.
+  Example titles:
+  - "Compression Therapy – Intro Session (20 min)"
+  - "Compression Therapy – 5 Sessions"
+  - "Red Light Therapy – 10 Sessions"
+  - "Hyperbaric Oxygen Therapy – 60 Minute 5 Sessions"
+- Put exact prices into \`price\`.
+- Put durations like "20 mins", "60 mins" into \`duration\` when clear.
+- If duration is ambiguous, still emit the package, but lower \`_meta.confidence_score\` and add a warning.
 
 LOW-CONFIDENCE / AMBIGUOUS ITEMS
 --------------------------------
-Do **NOT** silently drop possible packages just because the layout is messy.
+If text likely represents a purchasable drip, injection, session, or add-on but the boundaries are fuzzy:
 
-If you see a text fragment that **probably** represents a purchasable drip, injection or add-on,
-but the boundaries are unclear:
-
-- Still create a package.
+- STILL create a package.
 - Set \`_meta.confidence_score\` to a low value (e.g. 0.3–0.6).
-- Add one or more warnings in \`_meta.warnings\`, for example:
+- Add warnings such as:
   - "Low confidence segmentation: package boundaries may be incorrect"
   - "Title and description may be mixed from neighbouring items"
   - "Price attached with low confidence"
-- Only omit text that is clearly not a purchasable item (e.g. disclaimers, headings with no price, general marketing copy).
 
-If you are unsure whether something is a header or a package with price, **prefer to emit it as a package**
-with low \`confidence_score\` and a clear warning, rather than dropping it entirely.
+Only ignore obvious non-package text: disclaimers, general marketing copy, headings with no price, etc.
 
-OUTPUT FORMAT
--------------
-Return VALID JSON only (no markdown, no backticks, no comments) with this exact top-level shape:
+OUTPUT FORMAT (STRICT)
+----------------------
+Return **only** a single JSON object with this exact shape (no markdown, no comments):
 
 {
-  "packages": [ { /* PackageRow */ }, ... ]
+  "packages": [ { ... }, ... ]
 }
 
-Each package object must contain ALL of these keys:
+Each package object MUST include ALL of the following keys:
 
 - title: string
 - description: string
@@ -184,13 +195,13 @@ Each package object must contain ALL of these keys:
 - hospital_name: string
 - treatment_name: string
 - sub_treatments: string
-- price: number or null
-- original_price: number or null
-- currency: "USD" | "THB" | "EUR" | "GBP" | "SGD" | "MYR" | "KRW"
+- price: number | null
+- original_price: number | null
+- currency: "USD" | "THB" | "EUR" | "GBP" | "SGD" | "MYR" | "KRW" | "CNY"
 - duration: string
 - treatment_category: string
 - anaesthesia: string
-- commission: number or null
+- commission: number | null
 - featured: boolean
 - status: "active" | "inactive"
 - doctor_name: string
@@ -211,27 +222,33 @@ Each package object must contain ALL of these keys:
     warnings: string[]
   }
 
-If any value is unknown:
-- Use "" for strings
-- null for numbers
-- false for booleans (featured, is_le_package) unless explicitly stated
-- status defaults to "active" if unclear
+DEFAULTS WHEN UNKNOWN
+---------------------
+If any value is unknown or not present in the OCR text:
+- Use "" for strings.
+- Use null for numeric fields (price, original_price, commission).
+- Use false for booleans (featured, is_le_package) unless clearly true.
+- Use "active" for status if unclear.
+- _meta.source_file = the file name for that page.
+- _meta.source_page = the page number.
+- _meta.confidence_score between 0.0 and 1.0 (your best guess).
 
 LANGUAGE & TRANSLATION
 ----------------------
 - If the package text is already in ENGLISH:
-  - Keep title / description / details in English.
-  - translation_title / translation_description / translation_details → "".
-  - translation → "" or "EN".
+  - Keep title/description/details in English.
+  - translation_title / translation_description / translation_details = "".
+  - translation = "" or "EN".
 - If the package text is NOT English (e.g. Chinese, Thai):
-  - Keep the original language in title / description / details.
-  - Provide a good Chinese translation:
-      - translation_title: title translated to Chinese.
-      - translation_description: description translated to Chinese.
-      - translation_details: details translated to Chinese.
-  - Set translation to a short language code like "ZH" or "TH->ZH".
-- If the text is unreadable, leave translation_* as "" and add a warning like
-  "OCR text unreadable for this package".
+  - Keep the original language in title/description/details.
+  - Provide ENGLISH translations:
+    - translation_title: title → ENGLISH
+    - translation_description: description → ENGLISH
+    - translation_details: details → ENGLISH
+  - translation = short language code, e.g. "ZH", "TH->ZH".
+- If the text is unreadable:
+  - leave translation_* = ""
+  - add a warning like "OCR text unreadable for this package".
 
 CANONICAL TREATMENT NAMES
 -------------------------
@@ -313,8 +330,7 @@ Traditional Medicine:
 
 Rules:
 - If a menu item clearly matches one of the above, set treatment_name to that exact string.
-- If no canonical name fits, you may use a best-effort descriptive treatment_name
-  such as "IV Drip Therapy", "Skin Rejuvenation Package", etc.
+- If no canonical name fits, use the closest treatment_name match.
 
 FIELD MAPPING HINTS
 -------------------
@@ -336,11 +352,14 @@ _Example warnings in _meta.warnings_:
 - "Currency not recognized"
 - "Low confidence segmentation: package boundaries may be incorrect"
 
-OCR INPUT (THIS FILE ONLY, BY PAGE)
------------------------------------
+Remember: **Do not output anything except the JSON object**.
+
+OCR TEXT (THIS FILE ONLY, BY PAGE)
+----------------------------------
 ${joinedPages}
 `;
 }
+
 
 /**
  * sanitizeModelResponse
@@ -353,21 +372,37 @@ function sanitizeModelResponse(value: string): string {
 
   let cleaned = value.trim();
 
-  // Strip common markdown fences
+  // Strip common markdown fences like ```json ... ```
   cleaned = cleaned
-    .replace(/^```json/i, "")
-    .replace(/^```/, "")
-    .replace(/```$/, "")
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/i, "")
     .trim();
 
-  const firstBrace = cleaned.indexOf("{");
-  const lastBrace = cleaned.lastIndexOf("}");
-
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    cleaned = cleaned.slice(firstBrace, lastBrace + 1).trim();
+  // If it already looks like JSON (starts with { or [ and ends with } or ])
+  // just return it as-is.
+  if (/^[\[{]/.test(cleaned) && /[\]}]$/.test(cleaned)) {
+    return cleaned;
   }
 
-  return cleaned;
+  // Fallback: grab from first '{' or '[' to last '}' or ']'
+  const firstCurly = cleaned.indexOf("{");
+  const lastCurly = cleaned.lastIndexOf("}");
+  const firstSquare = cleaned.indexOf("[");
+  const lastSquare = cleaned.lastIndexOf("]");
+
+  const starts = [firstCurly, firstSquare].filter((i) => i !== -1);
+  const ends = [lastCurly, lastSquare].filter((i) => i !== -1);
+
+  if (!starts.length || !ends.length) {
+    // Nothing better to do – return as-is and let JSON.parse throw for logging
+    return cleaned;
+  }
+
+  const start = Math.min(...starts);
+  const end = Math.max(...ends);
+
+  return cleaned.slice(start, end + 1).trim();
 }
 
 /**
