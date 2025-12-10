@@ -84,7 +84,7 @@ export async function uploadCsvToAdmin(
   formData.append("confirmAutoCreate", String(options.confirmAutoCreate))
   formData.append("clearExisting", String(options.clearExisting))
 
-  const res = await fetch("/api/admin/bulk-import-packages", {
+  const res = await fetch("/api/admin/clinic-menus/bulk-import-packages", {
     method: "POST",
     body: formData,
   })

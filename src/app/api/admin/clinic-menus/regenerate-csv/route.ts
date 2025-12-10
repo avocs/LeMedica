@@ -15,7 +15,7 @@ async function ensureCsvOutputDir() {
 
 
 /**
- * POST /api/ocr-menus/regenerate-csv
+ * 
  * ----------------------------------
  * Accepts either:
  *  - A direct payload: { packages: PackageRow[], ... }
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     // Optional forwarding to importer
     let importerStatus: string | undefined;
     if (body.forwardToImporter) {
+      console.log("[Route] Attempting Forwarding..");
       const importerResult = await forwardCsvToImporter(csvContent, {
         confirmAutoCreate: body.confirmAutoCreate,
         clearExisting: body.clearExisting,
@@ -117,8 +118,8 @@ async function forwardCsvToImporter(
   const baseUrl =
     process.env.BULK_IMPORT_ENDPOINT ||
     (process.env.APP_BASE_URL
-      ? `${process.env.APP_BASE_URL}/api/admin/bulk-import-packages`
-      : "http://localhost:3000/api/admin/bulk-import-packages");
+      ? `${process.env.APP_BASE_URL}/api/admin/clinic-menus/bulk-import-packages`
+      : "http://localhost:3000/api/admin/clinic-menus/bulk-import-packages");
 
   const importerUrl = baseUrl;
 

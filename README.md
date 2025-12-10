@@ -1,5 +1,5 @@
 # There was an attempt
-in my defense ive not worked with api's before ....and im on free ver of cursor
+claude is sometimes doing its thing. 
 
 ## Local Development – Quick Start
 
@@ -13,13 +13,12 @@ Prompt to Claude called in `src\services\aiExtractor.ts`
 
 - **Node.js** ≥ 18 (20.x recommended)
 - **npm** ≥ 9  
-  (Optionally `pnpm` or `yarn`, but all commands below use `npm`.)
 - **git**
 
 ### 1. Clone the repository
 
 ```bash
-git clone <YOUR_REPO_URL> lemedica
+git clone <REPO-URL> lemedica
 cd lemedica
 ```
 ### 2. Install dependencies
@@ -63,23 +62,19 @@ http://localhost:3000/admin/clinic-menus/ocr
 
 ## UI/UX
 Currently looks like this: 
-![upload](images/upld-panel.png)
-![summary](images/summary-panel.png)
-![extracted](images/extr-pkg-panel.png)
-![debug](images/debug-act-panel.png)
+![upload](data/images/upld-panel.png)
+![summary](data/images/summary-panel.png)
+![extracted](data/images/extr-pkg-panel.png)
+![debug](data/images/debug-act-panel.png)
 Saves to a csv: 
-![csvout](images/csv-output.png)
+![csvout](data/images/csv-output.png)
 
 
 ## Pending To-Do's: 
 1. UI/UX fix
     - logo for invalid lines used for warning lines in summary panel: both should be distinct. 
-    - seems like i have to migrate to a later version of next.js for security
         
 2. Backend To-Do's
     - multipage recognition not very strong. could just be this one in particular 
     - multifile recognition is also dogshit.
-
-3. Codebase todo's
-    - note that ocr-debugs are created and saved in tmp. set debug flag off once done.
-    - check if theres anything that can be done about the many files thats cluttering the workspace
+    - chinese gives very wonky results, not the strongest at inferring. 

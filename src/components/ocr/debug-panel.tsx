@@ -239,7 +239,7 @@ export function DebugPanel({
     setDebugError(null)
 
     try {
-      const res = await fetch(`/api/ocr-menus/debug-text?batchId=${encodeURIComponent(batchId)}`)
+      const res = await fetch(`/api/admin/clinic-menus/debug-text?batchId=${encodeURIComponent(batchId)}`)
       if (!res.ok) {
         const data = await res.json().catch(() => null)
         throw new Error(data?.message || `Failed to load debug text (${res.status})`)

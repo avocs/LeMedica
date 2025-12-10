@@ -136,7 +136,8 @@ export async function runOcrOnFiles(files: SavedFile[]): Promise<OcrPage[]> {
     }
 
     // Image file: use Tesseract directly with multi-language support
-    const buffer = await fs.readFile(file.buffer);
+    // const buffer = await fs.readFile(file.buffer);
+    const buffer = file.buffer;
     const text = await runTesseract(buffer);
     pages.push({
       fileId: file.fileId,
