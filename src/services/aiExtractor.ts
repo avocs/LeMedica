@@ -33,7 +33,6 @@ export async function extractPackagesFromOcrText(
 
     const prompt = buildPromptForSingleFile(orderedPages);
     logPromptStats(fileId, prompt);
-
     const rawResponse = await callBedrockForExtraction(prompt, {
       maxTokens: 6000,
       temperature: 0.1,
@@ -245,7 +244,7 @@ LANGUAGE & TRANSLATION
     - translation_title: title → ENGLISH
     - translation_description: description → ENGLISH
     - translation_details: details → ENGLISH
-  - translation = short language code, e.g. "ZH", "TH->ZH".
+    - translation = short language code, e.g. "ZH", "TH->ZH".
 - If the text is unreadable:
   - leave translation_* = ""
   - add a warning like "OCR text unreadable for this package".

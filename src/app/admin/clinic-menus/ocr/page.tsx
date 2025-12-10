@@ -1,4 +1,6 @@
 // page.tsx
+// all that goes in this folder are UI routes, ie. URLs that render UI, admin-facing
+// includes: server componens, client components, layouts, loading UI, error UI, data fetching logic
 
 "use client"
 

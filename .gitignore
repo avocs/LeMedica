@@ -2,5 +2,5 @@
 .env.local
 node_modules
 tmp
-zipbackups
+data/zipbackups
 .next

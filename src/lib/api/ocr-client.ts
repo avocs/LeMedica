@@ -7,7 +7,7 @@ const BASE_URL = "";
 /**
  * uploadMenus
  * -----------
- * Sends one or more files to POST /api/ocr-menus.
+ * Sends one or more files to POST /api/admin/clinic-menus.
  */
 function safeErrorMessage(action: string, status: number, body: any): string {
   if (body?.message && typeof body.message === "string") {
@@ -23,7 +23,7 @@ export async function uploadMenus(files: File[]): Promise<OcrMenusResponse> {
   const formData = new FormData()
   files.forEach((file) => formData.append("file", file))
 
-  const res = await fetch("/api/ocr-menus", {
+  const res = await fetch("/api/admin/clinic-menus", {
     method: "POST",
     body: formData,
   })
@@ -52,7 +52,7 @@ export async function regenerateCsv(payload: {
   confirmAutoCreate?: boolean
   clearExisting?: boolean
 }): Promise<Blob> {
-  const res = await fetch("/api/ocr-menus/regenerate-csv", {
+  const res = await fetch("/api/admin/clinic-menus/regenerate-csv", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

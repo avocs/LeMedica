@@ -7,13 +7,13 @@ import { createWorker } from "tesseract.js";
 import pdfParse from "pdf-parse";
 import type { OcrPage } from "@/lib/types/ocr";
 
-const OCR_DEBUG_DIR = join(process.cwd(), "tmp", "ocr-debug");
+const OCR_DEBUG_DIR = join(process.cwd(), "data", "tmp", "ocr-debug");
 // Toggle with an env var so prod isn’t spammed
 const OCR_DEBUG_ENABLED = process.env.OCR_DEBUG === "1";
 
-const TEMP_DIR = join(process.cwd(), "tmp", "ocr-uploads");
+// const TEMP_DIR = join(process.cwd(), "tmp", "ocr-uploads");
 const MAX_FILE_SIZE_BYTES =
-  Number(process.env.OCR_MAX_FILE_MB || 25) * 1024 * 1024;
+  Number(process.env.OCR_MAX_FILE_MB || 50) * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -47,7 +47,7 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
     page_count?: number;
   }[];
 }> {
-  ensureTempDirectory();
+  // ensureTempDirectory();
 
   // 🔹 Generate the batch ID ONCE and reuse it everywhere
   const batchId = generateFriendlyBatchId();
@@ -79,26 +79,20 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
         )} MB.`,
       );
     }
-
+  
     const fileId = randomUUID();
-
-    // 🔹 Use only the last path segment (strip folder parts)
+  
     const originalName = file.name || `upload-${fileId}`;
     const baseName = originalName.split(/[\\/]/).pop() || originalName;
-
-    // 🔹 Sanitize for filesystem (no weird chars / slashes)
-    const safeName = baseName.replace(/[^\w.\-]+/g, "_");
-
-    const tempPath = join(TEMP_DIR, `${fileId}-${safeName}`);
-
+  
+    // ⬇️ NEW: keep it in memory only
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(tempPath, buffer);
-
+  
     savedFiles.push({
       fileId,
-      fileName: baseName, // keep a nice display name (no folders)
+      fileName: baseName,
       mimeType: file.type,
-      path: tempPath,
+      buffer,
     });
   }
 
@@ -121,7 +115,8 @@ type SavedFile = {
   fileId: string;
   fileName: string;
   mimeType: string;
-  path: string;
+  buffer: Buffer;
+  // path: string;
 };
 
 /**
@@ -141,7 +136,7 @@ export async function runOcrOnFiles(files: SavedFile[]): Promise<OcrPage[]> {
     }
 
     // Image file: use Tesseract directly with multi-language support
-    const buffer = await fs.readFile(file.path);
+    const buffer = await fs.readFile(file.buffer);
     const text = await runTesseract(buffer);
     pages.push({
       fileId: file.fileId,
@@ -216,7 +211,8 @@ async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
  * If pdf-parse returns nothing, we still emit one empty page entry.
  */
 async function runOcrOnPdf(file: SavedFile): Promise<OcrPage[]> {
-  const buffer = await fs.readFile(file.path);
+  // const buffer = await fs.readFile(file.buffer);
+  const buffer = file.buffer;
   const pageTexts: string[] = [];
 
   const options = {
@@ -310,9 +306,9 @@ function cleanText(text: string): string {
     .trim();
 }
 
-function ensureTempDirectory() {
-  mkdirSync(TEMP_DIR, { recursive: true });
-}
+// function ensureTempDirectory() {
+//   mkdirSync(TEMP_DIR, { recursive: true });
+// }
 
 function extractFilesFromFormData(formData: FormData): File[] {
   const files: File[] = [];

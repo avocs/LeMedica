@@ -1,0 +1,513 @@
+{
+  "success": true,
+  "batch_id": "b_20251210_140842_ygy6",
+  "files": [
+    {
+      "file_id": "1599a0a8-7673-4c7d-b92d-f1f224bfad56",
+      "original_name": "iv-drip-menu.pdf",
+      "page_count": 1
+    }
+  ],
+  "packages": [
+    {
+      "title": "Basic Hydration Drip",
+      "description": "Basic hydration IV drip",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Hydration",
+      "price": 80,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Calm Drip",
+      "description": "Calm and relaxation IV drip",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Stress Relief",
+      "price": 480,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Liver Detox Drip",
+      "description": "IV drip for liver detoxification",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Detox",
+      "price": 280,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Slimming Drip",
+      "description": "IV drip for weight loss support",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Weight Loss",
+      "price": 350,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Skin Health Drip",
+      "description": "IV drip for skin health and rejuvenation",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Skin Rejuvenation",
+      "price": 280,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Body Reset Drip",
+      "description": "IV drip for body reset and rejuvenation",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Body Rejuvenation",
+      "price": 380,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Energy Booster & Recovery Drip",
+      "description": "IV drip for energy boost and recovery",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Energy Boost,Recovery",
+      "price": 250,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Essential Multivi & Elderly Drip",
+      "description": "IV drip for essential multivitamins and elderly care",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Multivitamin,Elderly Care",
+      "price": null,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.6,
+        "warnings": [
+          "Missing price for package",
+          "price missing; set to null",
+          "Hospital not recognized: CarePlus Clinic",
+          "price missing; set to null",
+          "Hospital not recognized: CarePlus Clinic",
+          "Missing required fields: price"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "NAD+ Drip",
+      "description": "NAD+ IV drip",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Anti-Aging",
+      "price": 1200,
+      "original_price": 1800,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Peak Performance Drip",
+      "description": "IV drip for peak performance",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Performance Enhancement",
+      "price": 1200,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "All Inclusive Vitamin Drip",
+      "description": "Comprehensive vitamin IV drip",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Vitamin Boost",
+      "price": 1500,
+      "original_price": 3500,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Exosome, Anti-Aging & Restore Drip",
+      "description": "IV drip for exosome therapy, anti-aging, and restoration",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Anti-Aging,Restoration",
+      "price": 950,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "High Dose Vitamin C Premium & Restore Drip",
+      "description": "High dose vitamin C IV drip for premium restoration",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Vitamin C,Restoration",
+      "price": null,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.6,
+        "warnings": [
+          "Missing price for package",
+          "price missing; set to null",
+          "Hospital not recognized: CarePlus Clinic",
+          "price missing; set to null",
+          "Hospital not recognized: CarePlus Clinic",
+          "Missing required fields: price"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Herpes Fighter Drip",
+      "description": "IV drip for herpes treatment",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Herpes Treatment",
+      "price": 400,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "HPV Fighter Drip",
+      "description": "IV drip for HPV treatment",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "HPV Treatment",
+      "price": 380,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.9,
+        "warnings": [
+          "Hospital not recognized: CarePlus Clinic",
+          "Hospital not recognized: CarePlus Clinic"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    },
+    {
+      "title": "Protection+ Drip",
+      "description": "Protective IV drip",
+      "hospital_name": "CarePlus Clinic",
+      "treatment_name": "IV Therapy",
+      "sub_treatments": "Immune Support",
+      "price": null,
+      "currency": "MYR",
+      "treatment_category": "Wellness",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "includes": "IV Drip",
+      "hospital_location": "Kepong",
+      "category": "IV Drips",
+      "hospital_country": "Malaysia",
+      "_meta": {
+        "source_file": "iv-drip-menu.pdf",
+        "source_page": 1,
+        "confidence_score": 0.6,
+        "warnings": [
+          "Missing price for package",
+          "price missing; set to null",
+          "Hospital not recognized: CarePlus Clinic",
+          "price missing; set to null",
+          "Hospital not recognized: CarePlus Clinic",
+          "Missing required fields: price"
+        ],
+        "matcher": {
+          "hospitalScore": 0.5,
+          "treatmentScore": 1
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total": 16,
+    "valid": 0,
+    "withWarnings": 13,
+    "invalid": 3
+  }
+}

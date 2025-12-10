@@ -5,7 +5,7 @@ import {
   CLAUDE_SONNET_MODEL_ID,
   CLAUDE_OPUS_PROFILE_ARN,
   CLAUDE_SONNET_PROFILE_ARN,
-} from "../../bedrock-config.ts/bedrock-config";
+} from "../../data/references/bedrock-config/bedrock-config";
 
 /**
  * Default model ID resolution (matches bedrock-config.ts pattern)
