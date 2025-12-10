@@ -7,7 +7,7 @@
 //  Anything that should not be exposed to the client directly
 
 import { NextRequest, NextResponse } from "next/server";
-import { handleUploadAndExtractOcr } from "../../../../services/ocr";
+import { handleUploadAndExtractOcr } from "../../../../services/ocrProcessor";
 import { extractPackagesFromOcrText } from "../../../../services/aiExtractor";
 import { PackageRow} from "@/lib/types/ocr";
 import {

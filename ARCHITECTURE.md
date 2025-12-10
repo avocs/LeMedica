@@ -27,60 +27,62 @@ Provide an **admin-only tool** that:
 ## 2. Directory Structure (Relevant Parts)
 
 ```txt
-src/
-  app/
-    layout.tsx
-    globals.css
-    admin/
-      clinic-menus/
-        ocr/
-          page.tsx                 # Main React UI (ClinicMenuOcrPage)
+LeMedica/
+│
+├─ .env.local                     # Environment variables (API keys, Bedrock config, etc.)
+├─ next.config.js                 # Next.js configuration (serverExternalPackages, body limits)
+├─ package.json                   # Project dependencies and scripts
+├─ tsconfig.json                  # TypeScript configuration
+├─ package-lock.json
+├─ postcss.config.mjs
+├─ tailwind.config.mjs
+|
+├─ .next/                         # build files
+│
+├─ src/                           # Source Root
+│   ├─ app/                           # Next.js App Router: pages, layouts, API routes
+│   │   ├─ layout.tsx                 # Root layout
+│   │   ├─ page.tsx                   # Landing page
+│   │   │
+│   │   ├─ admin/                     # Admin dashboard UI
+│   │   │   └─ clinic-menus/          # Clinic menu tools
+│   │   │       └─ ocr/               # OCR import UI
+│   │   │           └─ page.tsx       # OCR upload and review interface
+│   │   │
+│   │   └─ api/                       # Server API routes (server-only)
+│   │       └─ admin/
+│   │           └─ clinic-menus/
+│   │               ├─ route.ts       # POST /api/admin/clinic-menus (OCR pipeline entrypoint)
+│   │               └─ regenerate-csv/
+│   │                   └─ route.ts   # Utility API to regenerate structured CSV outputs
+│   │
+│   ├─ components/                    # Reusable UI building blocks
+│   │   ├─ ocr/                       # OCR-specific UI (tables, previews, status blocks)
+│   │   └─ ui/                        # General-purpose UI components (buttons, modals, inputs)
+│   │
+│   ├─ services/                      # Business logic + integrations (NOT React-specific)
+│   │   ├─ aiExtractor.ts             # Groups OCR pages & calls Claude via Bedrock
+│   │   ├─ bedrockClient.ts           # AWS Bedrock invocation + model resolution
+│   │   ├─ normalizer.ts              # Cleans & normalizes extracted package rows
+│   │   └─ ocrProcessor.ts            # Tesseract + PDF parsing (OCR engine driver)
+│   │
+│   └─ lib/                           # Shared utilities (pure functions, types, helpers)
+│       ├─ api/                       # Client-side API helpers for fetch calls
+│       └─ types/                     # Type definitions (OcrPage, PackageRow, etc.)
+│
+├─ data/                          # Local non-production data
+│   ├─ images/                    # For README.md visualisation
+│   ├─ tessdata/                  # Tesseract .traineddata files (eng, chi_sim, etc.)
+│   ├─ tmp/                       # Runtime temp space for debug snapshots
+│   └─ references/                # Configs, constants, reference dictionaries
+│
+├─ tests/                           # Performance check for OCR extractor
+│   ├─ perf-check/                  # Quick CSV drop spot for comparison
+│   ├─ test-menus/                  # Examples to test on
+│   └─ test-menus-folder/           # Example folder to test on
+│
+└─ node_modules/                  # Installed dependencies (auto-managed)
 
-    api/
-      ocr-menus/
-        route.ts                   # POST /api/ocr-menus     (OCR + AI)
-        regenerate-csv/
-          route.ts                 # POST /api/ocr-menus/regenerate-csv
-
-  components/
-    ocr/
-      file-upload-panel.tsx        # Upload + file list + Process button
-      ocr-summary-panel.tsx        # Counts + warning summary
-      package-table.tsx            # Editable table of PackageRow[]
-      json-preview-panel.tsx       # JSON view/edit + download
-      action-bar.tsx               # Regenerate CSV, Download, Import
-      debug-panel.tsx              # Last response, errors, timings
-
-    ui/                            # shadcn/ui primitives
-      button.tsx
-      input.tsx
-      select.tsx
-      table.tsx
-      alert.tsx
-      toast.tsx
-      toaster.tsx
-      ...etc
-
-  hooks/
-    use-toast.ts                   # Toast helper hook used in page.tsx
-
-  lib/
-    types/
-      ocr.ts                       # PackageRow, OcrMenusResponse, etc.
-    api/
-      ocr-client.ts                # Frontend API client wrapper
-    validation.ts                  # Row validation + fuzzy matching
-    utils.ts                       # cn() helper (clsx + tailwind-merge)
-
-services/
-  ocr.ts                           # Tesseract-based OCR (per page)
-  normalizer.ts                    # Normalizes PackageRow for CSV
-  csvGenerator.ts                  # PackageRow[] → CSV string
-
-ocr_outputs/                       # (Backend) OCR debug snapshots (JSON)
-csv-outputs/                       # (Backend) generated CSV files
-
-test_menu_1/                       # (Local) sample menus used by test script
 
 ```
 
