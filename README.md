@@ -73,7 +73,6 @@ Saves to a csv:
 ## Pending To-Do's: 
 1. UI/UX fix
     - logo for invalid lines used for warning lines in summary panel: both should be distinct. 
-    - toggle columns: when rechecked after unchecking, gets added to the back instead of its original position
         
 2. Backend To-Do's
     - multipage recognition not very strong. could just be this one in particular 
