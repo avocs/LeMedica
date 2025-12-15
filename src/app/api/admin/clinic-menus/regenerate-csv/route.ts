@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const batchId: string =
       typeof body.batch_id === "string" && body.batch_id.trim().length > 0
         ? body.batch_id.trim()
-        : "clinic-menu-batch";
+        : "batch";
 
     // If the batchId already looks like "b_20251204_215614_omm4",
     // reuse it directly as the base filename. Otherwise, prefix it.
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         : `${defaultBaseName}.csv`;
 
     const headers = new Headers({
-      "Content-Type": "text/csv",
+      "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,
     });
 
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       console.error("Failed to persist regenerated CSV to csv-outputs/:", writeErr);
     }
 
-    return new NextResponse(csvContent, { status: 200, headers });
+    return new NextResponse("\uFEFF" + csvContent, { status: 200, headers });
     
 
   } catch (error) {
@@ -127,7 +127,7 @@ async function forwardCsvToImporter(
     const formData = new FormData();
     formData.append(
       "file",
-      new Blob([csvContent], { type: "text/csv" }),
+      new Blob([csvContent], { type: "text/csv; charset=utf-8" }),
       "clinic-menu-import.csv"
     );
     if (options.confirmAutoCreate !== undefined) {

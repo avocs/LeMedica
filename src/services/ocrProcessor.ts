@@ -1,19 +1,20 @@
+// src/services/ocrProcessor.ts
 import { promises as fs } from "fs";
 import { mkdirSync } from "fs";
 import { NextRequest } from "next/server";
-import { join } from "path";
+import { join, resolve } from "path";
 import { randomUUID } from "crypto";
-import { createWorker } from "tesseract.js"; 
 import pdfParse from "pdf-parse";
+import { createWorker, PSM } from "tesseract.js";
+import sharp from "sharp";
 import type { OcrPage } from "@/lib/types/ocr";
 
 const OCR_DEBUG_DIR = join(process.cwd(), "data", "tmp", "ocr-debug");
-// Toggle with an env var so prod isn’t spammed
 const OCR_DEBUG_ENABLED = process.env.OCR_DEBUG === "1";
 
-// const TEMP_DIR = join(process.cwd(), "tmp", "ocr-uploads");
 const MAX_FILE_SIZE_BYTES =
   Number(process.env.OCR_MAX_FILE_MB || 50) * 1024 * 1024;
+
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -22,34 +23,42 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/heif",
 ]);
 
-// -----------------------------------------------------------------------------
-// OCR language + timeout config
-// -----------------------------------------------------------------------------
-// Languages for Tesseract OCR.
-// IMPORTANT: More languages = heavier + slower.
 const OCR_LANGS = "eng+chi_sim";
-
-// Max time (ms) we are willing to wait for a single OCR call.
 const OCR_TIMEOUT_MS = Number(process.env.OCR_TIMEOUT_MS || 150000);
 
-/**
- * handleUploadAndExtractOcr
- * -------------------------
- * Accepts uploaded files from a NextRequest, validates them, writes the content
- * to a temp folder, runs OCR per page, and returns a list of OcrPage objects.
- */
+// Tesseract tuning: try 6 for block text; 11 helps sparse menus.
+// You can override with env later if you want.
+// const TESS_PSM = String(process.env.OCR_TESS_PSM || "6");
+const TESS_OEM = String(process.env.OCR_TESS_OEM || "1"); // 1 = LSTM only
+
+function resolveTessPSM(): PSM {
+  const raw = process.env.OCR_TESS_PSM;
+
+  switch (raw) {
+    case "0": return PSM.OSD_ONLY;
+    case "1": return PSM.AUTO_OSD;
+    case "3": return PSM.AUTO;
+    case "4": return PSM.SINGLE_COLUMN;
+    case "6": return PSM.SINGLE_BLOCK;        // ✅ best for menus
+    case "11": return PSM.SPARSE_TEXT;         // ✅ good fallback
+    default:  return PSM.SINGLE_BLOCK;
+  }
+}
+
+
+
+type SavedFile = {
+  fileId: string;
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
+};
+
 export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
   batchId: string;
   ocrPages: OcrPage[];
-  filesMeta: {
-    file_id: string;
-    original_name: string;
-    page_count?: number;
-  }[];
+  filesMeta: { file_id: string; original_name: string; page_count?: number }[];
 }> {
-  // ensureTempDirectory();
-
-  // 🔹 Generate the batch ID ONCE and reuse it everywhere
   const batchId = generateFriendlyBatchId();
 
   const formData = await req.formData();
@@ -58,40 +67,22 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
   if (!incomingFiles.length) {
     throw createHttpError(
       400,
-      "No file provided. Please append `file` or `files[]` to FormData.",
+      "No file provided. Please append `file` or `files[]` to FormData."
     );
   }
 
   const savedFiles: SavedFile[] = [];
+  for (const f of incomingFiles) {
+    validateIncomingFile(f);
 
-  for (const file of incomingFiles) {
-    if (!ALLOWED_MIME_TYPES.has(file.type)) {
-      throw createHttpError(
-        400,
-        "Unsupported file type. Please upload PDF, JPG, PNG, or HEIC.",
-      );
-    }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      throw createHttpError(
-        413,
-        `File exceeds the maximum allowed size of ${Math.round(
-          MAX_FILE_SIZE_BYTES / (1024 * 1024),
-        )} MB.`,
-      );
-    }
-  
     const fileId = randomUUID();
-  
-    const originalName = file.name || `upload-${fileId}`;
-    const baseName = originalName.split(/[\\/]/).pop() || originalName;
-  
-    // ⬇️ NEW: keep it in memory only
-    const buffer = Buffer.from(await file.arrayBuffer());
-  
+    const baseName = (f.name || `upload-${fileId}`).split(/[\\/]/).pop() || `upload-${fileId}`;
+    const buffer = Buffer.from(await f.arrayBuffer());
+
     savedFiles.push({
       fileId,
       fileName: baseName,
-      mimeType: file.type,
+      mimeType: f.type,
       buffer,
     });
   }
@@ -99,46 +90,26 @@ export async function handleUploadAndExtractOcr(req: NextRequest): Promise<{
   const ocrPages = await runOcrOnFiles(savedFiles);
   const filesMeta = summarizeFiles(savedFiles, ocrPages);
 
-  // 🔹 Only valid now because batchId is defined above
   if (OCR_DEBUG_ENABLED) {
     await saveOcrDebugSnapshot(batchId, ocrPages);
   }
 
-  return {
-    batchId, // reuse the same batchId here
-    ocrPages,
-    filesMeta,
-  };
+  return { batchId, ocrPages, filesMeta };
 }
 
-type SavedFile = {
-  fileId: string;
-  fileName: string;
-  mimeType: string;
-  buffer: Buffer;
-  // path: string;
-};
-
-/**
- * runOcrOnFiles
- * --------------
- * Runs OCR on each page of the uploaded files and returns
- * OcrPage objects that retain page ordering and metadata.
- */
 export async function runOcrOnFiles(files: SavedFile[]): Promise<OcrPage[]> {
   const pages: OcrPage[] = [];
 
   for (const file of files) {
     if (file.mimeType === "application/pdf") {
-      const pdfPages = await runOcrOnPdf(file);
+      const pdfPages = await runOcrOnPdfSmart(file);
       pages.push(...pdfPages);
       continue;
     }
 
-    // Image file: use Tesseract directly with multi-language support
-    // const buffer = await fs.readFile(file.buffer);
-    const buffer = file.buffer;
-    const text = await runTesseract(buffer);
+    // Images (jpeg/png/heic/heif): preprocess → tesseract
+    const pre = await preprocessImageForOcr(file.buffer);
+    const text = await runTesseract(pre);
     pages.push({
       fileId: file.fileId,
       fileName: file.fileName,
@@ -150,69 +121,15 @@ export async function runOcrOnFiles(files: SavedFile[]): Promise<OcrPage[]> {
   return pages;
 }
 
-// Debugs txts
-async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
-  try {
-    mkdirSync(OCR_DEBUG_DIR, { recursive: true });
-
-    // Per-page debug files
-    for (const page of pages) {
-      const safeFile = page.fileName.replace(/[^\w.-]+/g, "_");
-      const debugName = `${batchId}_p${page.pageNumber}_${safeFile}.txt`;
-      const debugPath = join(OCR_DEBUG_DIR, debugName);
-
-      const content =
-        `BATCH: ${batchId}\n` +
-        `FILE:  ${page.fileName}\n` +
-        `PAGE:  ${page.pageNumber}\n` +
-        `----------------------------------------\n` +
-        page.rawText;
-
-      await fs.writeFile(debugPath, content, "utf8");
-    }
-
-    // Aggregated per-file debug
-    const pagesByFile = new Map<string, OcrPage[]>();
-    for (const page of pages) {
-      const key = page.fileName;
-      if (!pagesByFile.has(key)) pagesByFile.set(key, []);
-      pagesByFile.get(key)!.push(page);
-    }
-
-    for (const [fileName, filePages] of pagesByFile.entries()) {
-      const safeFile = fileName.replace(/[^\w.-]+/g, "_");
-      const debugName = `${batchId}_FILE_${safeFile}.txt`;
-      const debugPath = join(OCR_DEBUG_DIR, debugName);
-
-      const content =
-        `BATCH: ${batchId}\n` +
-        `FILE:  ${fileName}\n` +
-        `PAGES: ${filePages.length}\n` +
-        `========================================\n\n` +
-        filePages
-          .sort((a, b) => a.pageNumber - b.pageNumber)
-          .map((p) => `--- PAGE ${p.pageNumber} ---\n${p.rawText}\n`)
-          .join("\n");
-
-      await fs.writeFile(debugPath, content, "utf8");
-    }
-
-    console.log(
-      `[OCR DEBUG] Saved page-level + file-level text for batch ${batchId} to ${OCR_DEBUG_DIR}`,
-    );
-  } catch (err) {
-    console.error("[OCR DEBUG] Failed to save snapshot:", err);
-  }
-}
-
 /**
- * runOcrOnPdf
- * -----------
- * Uses pdf-parse to extract text per page.
- * If pdf-parse returns nothing, we still emit one empty page entry.
+ * PDF handling strategy:
+ * 1) Try extracting selectable text via pdf-parse (fast and accurate for "raw PDFs")
+ * 2) If empty/weak, fallback to OCR the PDF buffer as a single block.
+ *
+ * NOTE: Page-perfect OCR for scanned PDFs requires rendering pages to images
+ * (pdfjs/poppler) which adds extra dependencies. This keeps it simple.
  */
-async function runOcrOnPdf(file: SavedFile): Promise<OcrPage[]> {
-  // const buffer = await fs.readFile(file.buffer);
+async function runOcrOnPdfSmart(file: SavedFile): Promise<OcrPage[]> {
   const buffer = file.buffer;
   const pageTexts: string[] = [];
 
@@ -228,43 +145,90 @@ async function runOcrOnPdf(file: SavedFile): Promise<OcrPage[]> {
     },
   };
 
-  const parsed = await pdfParse(buffer, options as any);
-
-  // Fallback: if pagerender didn't push anything but parsed.text exists,
-  // split by blank lines to approximate pages/sections.
-  if (!pageTexts.length && parsed.text) {
-    parsed.text
-      .split(/\n{2,}/)
-      .map((chunk) => cleanText(chunk))
-      .filter(Boolean)
-      .forEach((chunk) => pageTexts.push(chunk));
+  let parsedText = "";
+  try {
+    const parsed = await pdfParse(buffer, options as any);
+    parsedText = cleanText(parsed?.text || "");
+  } catch (e) {
+    // If pdf-parse fails, we still try OCR fallback below.
+    parsedText = "";
   }
 
-  // Still nothing? Emit a single empty page
-  if (!pageTexts.length) {
-    pageTexts.push("");
+  const usableText = parsedText && parsedText.replace(/\s+/g, "").length > 50;
+
+  if (usableText) {
+    // pdf-parse already filled pageTexts via pagerender; fallback to parsedText chunking if needed
+    if (!pageTexts.length) {
+      pageTexts.push(parsedText);
+    }
+    return pageTexts.map((rawText, i) => ({
+      fileId: file.fileId,
+      fileName: file.fileName,
+      pageNumber: i + 1,
+      rawText,
+    }));
   }
 
-  return pageTexts.map((rawText, index) => ({
-    fileId: file.fileId,
-    fileName: file.fileName,
-    pageNumber: index + 1,
-    rawText,
-  }));
+  // Fallback: scanned / image PDF → OCR whole PDF buffer (single "page")
+  // (Tesseract can sometimes handle PDF input; if it fails, you'll see it in logs.)
+  const text = await runTesseract(buffer);
+  return [
+    {
+      fileId: file.fileId,
+      fileName: file.fileName,
+      pageNumber: 1,
+      rawText: cleanText(text),
+    },
+  ];
 }
 
 /**
- * runTesseract
- * ------------
- * Uses a Tesseract.js worker with an explicit workerPath so it
- * doesn't try to load from `.next/worker-script/...`.
+ * Preprocess image buffers for OCR:
+ * - Convert to PNG (stable)
+ * - Grayscale
+ * - Normalize contrast
+ * - Light sharpening
+ * - Optional upscale to improve tiny text
+ * - Threshold to reduce noise
  */
-async function runTesseract(buffer: Buffer): Promise<string> {
-  // 🔹 Point directly at the Node worker in node_modules
-  const worker = await createWorker(OCR_LANGS,1,{workerPath: "./node_modules/tesseract.js/src/worker-script/node/index.js"});
+async function preprocessImageForOcr(input: Buffer): Promise<Buffer> {
+  try {
+    const img = sharp(input, { failOn: "none" }).rotate(); // auto-orient
 
+    // Inspect size; upscale small captures
+    const meta = await img.metadata();
+    const width = meta.width ?? 0;
+
+    const targetWidth =
+      width && width < 1400 ? Math.min(2200, Math.round(width * 2)) : undefined;
+
+    const out = await img
+      .resize(targetWidth ? { width: targetWidth, withoutEnlargement: false } : undefined)
+      .grayscale()
+      .normalise()
+      .sharpen()
+      .threshold(180)
+      .png()
+      .toBuffer();
+
+    return out;
+  } catch {
+    // If preprocessing fails, fall back to original buffer
+    return input;
+  }
+}
+
+async function runTesseract(buffer: Buffer): Promise<string> {
+  const worker = await createWorker(OCR_LANGS, 1, {
+    workerPath: "./node_modules/tesseract.js/src/worker-script/node/index.js",
+  });
 
   try {
+    await worker.setParameters({
+      tessedit_pageseg_mode: resolveTessPSM(),
+      tessedit_ocr_engine_mode: TESS_OEM,
+      preserve_interword_spaces: "1",
+    });
 
     const recognizePromise = worker.recognize(buffer);
 
@@ -273,17 +237,16 @@ async function runTesseract(buffer: Buffer): Promise<string> {
         () =>
           reject(
             new Error(
-              `Tesseract OCR timed out after ${OCR_TIMEOUT_MS} ms (languages: ${OCR_LANGS})`,
-            ),
+              `Tesseract OCR timed out after ${OCR_TIMEOUT_MS} ms (languages: ${OCR_LANGS})`
+            )
           ),
-        OCR_TIMEOUT_MS,
+        OCR_TIMEOUT_MS
       );
     });
 
     const result: any = await Promise.race([recognizePromise, timeoutPromise]);
-    return result.data?.text || "";
+    return result?.data?.text || "";
   } finally {
-    // Ensure worker is cleaned up even on timeout/error
     try {
       await worker.terminate();
     } catch {
@@ -292,43 +255,50 @@ async function runTesseract(buffer: Buffer): Promise<string> {
   }
 }
 
-/**
- * cleanText
- * ---------
- * Normalizes whitespace but preserves line breaks so that menu items
- * remain visually separated for the LLM.
- */
-function cleanText(text: string): string {
-  return text
-    .replace(/\r\n/g, "\n") // normalise Windows line endings
-    .replace(/\r/g, "\n")
-    .replace(/[ \t]+/g, " ") // collapse spaces/tabs
-    .replace(/\n{2,}/g, "\n") // collapse multiple blank lines
-    .trim();
+async function saveOcrDebugSnapshot(batchId: string, pages: OcrPage[]) {
+  try {
+    mkdirSync(OCR_DEBUG_DIR, { recursive: true });
+
+    // Write per-page files only (simpler and usually enough)
+    for (const page of pages) {
+      const safeFile = page.fileName.replace(/[^\w.-]+/g, "_");
+      const debugName = `${batchId}_p${page.pageNumber}_${safeFile}.txt`;
+      const debugPath = join(OCR_DEBUG_DIR, debugName);
+
+      const content =
+        `BATCH: ${batchId}\n` +
+        `FILE:  ${page.fileName}\n` +
+        `PAGE:  ${page.pageNumber}\n` +
+        `----------------------------------------\n` +
+        page.rawText;
+
+      await fs.writeFile(debugPath, content, "utf8");
+    }
+
+    console.log(`[OCR DEBUG] Saved text snapshots for batch ${batchId} → ${OCR_DEBUG_DIR}`);
+  } catch (err) {
+    console.error("[OCR DEBUG] Failed to save snapshot:", err);
+  }
 }
 
-// function ensureTempDirectory() {
-//   mkdirSync(TEMP_DIR, { recursive: true });
-// }
+function validateIncomingFile(file: File) {
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    throw createHttpError(400, "Unsupported file type. Upload PDF, JPG, PNG, or HEIC.");
+  }
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    throw createHttpError(
+      413,
+      `File exceeds max size of ${Math.round(MAX_FILE_SIZE_BYTES / (1024 * 1024))} MB.`
+    );
+  }
+}
 
 function extractFilesFromFormData(formData: FormData): File[] {
   const files: File[] = [];
 
-  // Single / multiple: "file"
-  const fileEntries = formData.getAll("file");
-  for (const entry of fileEntries) {
-    if (entry instanceof File) {
-      files.push(entry);
-    }
-  }
-
-  // Multiple: "files" or "files[]"
-  const multiples = [...formData.getAll("files"), ...formData.getAll("files[]")];
-  for (const entry of multiples) {
-    if (entry instanceof File) {
-      files.push(entry);
-    }
-  }
+  for (const entry of formData.getAll("file")) if (entry instanceof File) files.push(entry);
+  for (const entry of formData.getAll("files")) if (entry instanceof File) files.push(entry);
+  for (const entry of formData.getAll("files[]")) if (entry instanceof File) files.push(entry);
 
   return files;
 }
@@ -337,8 +307,17 @@ function summarizeFiles(files: SavedFile[], pages: OcrPage[]) {
   return files.map((file) => ({
     file_id: file.fileId,
     original_name: file.fileName,
-    page_count: pages.filter((page) => page.fileId === file.fileId).length,
+    page_count: pages.filter((p) => p.fileId === file.fileId).length,
   }));
+}
+
+function cleanText(text: string): string {
+  return (text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
 }
 
 function createHttpError(status: number, message: string) {
@@ -357,8 +336,7 @@ function generateFriendlyBatchId(): string {
   const hh = pad(now.getHours());
   const mm = pad(now.getMinutes());
   const ss = pad(now.getSeconds());
-
-  const rand = Math.random().toString(36).slice(2, 6); // 4-char slug
+  const rand = Math.random().toString(36).slice(2, 6);
 
   return `b_${y}${m}${d}_${hh}${mm}${ss}_${rand}`;
 }

@@ -122,22 +122,36 @@ GLOBAL EXTRACTION RULES
 5. Do NOT ignore non-English or bilingual lines; Chinese/Thai-only packages are still valid.
 6. If you are unsure whether something is a package, **prefer to include it** with low confidence instead of silently dropping it.
 
-DENSE MENUS
-----------------
-For dense text like:
+SEGMENTATION (MUST FOLLOW)
+--------------------------
+You MUST extract packages using PRICE ANCHORS.
 
-  Signature Drip ... £450
-  Limitless Drip ... £850
-  Hydration Drip £100 Sodium Chloride + Bicarbonate + ...
-  MultiVit Drip £125 Basic Hydration + B Complex + 2g Vitamin C
-  ...
+1) Scan OCR text and identify all price anchors in the form:
+   - currency symbol + number (e.g. £100, RM 150, ฿2,500, S$80, $120)
+   - number + currency code/keyword (e.g. 150 MYR, 120 USD)
+   - "from £55" counts as a price anchor as well.
+2) Each price anchor defines ONE package.
+3) For each price anchor:
+   - title = nearest plausible item name within ~1–2 lines around the anchor.
+   - description/details = text immediately adjacent that looks like inclusions/ingredients/duration.
+4) If borders are unclear (dense menus):
+   - DO NOT give up.
+   - Still emit one package per price anchor.
+   - If title is uncertain, set a minimal title like "Package – £100" (or "Package – RM150") and lower confidence.
 
-You must:
-- Treat each **"name ... £price"** as its own package.
-- Use price tokens (£100, £125, £150, £175, £200, £225, £450, £850, etc.) as strong boundaries between packages.
-- Use the text immediately around the name as:
-  - title       → main package name (e.g. "Hydration Drip", "Energy Drip (Myers Cocktail)")
-  - description/details/includes → compositions, ingredients, or extra info.
+MINIMUM OUTPUT REQUIREMENT
+--------------------------
+If you detect N distinct price anchors in the OCR for this file, you MUST output AT LEAST N packages
+(unless some anchors are exact duplicates referring to the same item).
+If you output fewer packages than anchors, add warnings explaining which anchors could not be mapped.
+
+OCR NOISE HANDLING
+------------------
+- OCR may contain random characters. Ignore isolated garbage tokens not near price anchors.
+- NEVER invent missing words/characters.
+- If text near a price anchor is incomplete/noisy, still output the package with:
+  - _meta.confidence_score between 0.3 and 0.6
+  - a warning: "OCR text incomplete/noisy near price anchor"
 
 SERVICE + SESSION BUNDLES
 -------------------------
@@ -165,18 +179,6 @@ You must:
 - Put durations like "20 mins", "60 mins" into \`duration\` when clear.
 - If duration is ambiguous, still emit the package, but lower \`_meta.confidence_score\` and add a warning.
 
-LOW-CONFIDENCE / AMBIGUOUS ITEMS
---------------------------------
-If text likely represents a purchasable drip, injection, session, or add-on but the boundaries are fuzzy:
-
-- STILL create a package.
-- Set \`_meta.confidence_score\` to a low value (e.g. 0.3–0.6).
-- Add warnings such as:
-  - "Low confidence segmentation: package boundaries may be incorrect"
-  - "Title and description may be mixed from neighbouring items"
-  - "Price attached with low confidence"
-
-Only ignore obvious non-package text: disclaimers, general marketing copy, headings with no price, etc.
 
 OUTPUT FORMAT (STRICT)
 ----------------------
@@ -337,8 +339,6 @@ FIELD MAPPING HINTS
 - Use the local price symbol or context to infer currency, e.g.:
     - "£" → GBP
     - "RM" → MYR
-    - "฿" → THB
-    - "S$" → SGD
     - "$" with US context → USD
 - treatment_name: use a canonical name from the list above whenever possible.
 - sub_treatments: comma-separated sub-focuses (e.g. "Hydration,Skin Rejuvenation").

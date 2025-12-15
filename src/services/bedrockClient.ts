@@ -112,7 +112,7 @@ export async function callBedrockForExtraction(
   try {
     // Resolve model ID first (throws if missing)
     resolvedModelId = resolveModelId(options?.modelId);
-    const maxTokens = options?.maxTokens ?? 4000;
+    const maxTokens = options?.maxTokens ?? 6000;
     const temperature = options?.temperature ?? 0.2;
 
     const input = {
@@ -144,7 +144,52 @@ export async function callBedrockForExtraction(
 
     const responseBody = JSON.parse(rawText || "{}");
     const claudeText = responseBody?.content?.[0]?.text || "";
-
+    
+    // ---- Bedrock response diagnostics (safe to keep in dev) ----
+    try {
+      const stopReason =
+        responseBody?.stop_reason ??
+        responseBody?.stopReason ??
+        responseBody?.stop_reason?.reason ??
+        "unknown";
+    
+      const usage = responseBody?.usage ?? null;
+    
+      // Anthropic responses often have usage like:
+      // { input_tokens, output_tokens } (names can vary)
+      const inTok =
+        usage?.input_tokens ??
+        usage?.inputTokens ??
+        usage?.input_token_count ??
+        usage?.prompt_tokens ??
+        null;
+    
+      const outTok =
+        usage?.output_tokens ??
+        usage?.outputTokens ??
+        usage?.output_token_count ??
+        usage?.completion_tokens ??
+        null;
+    
+      const likelyTruncated =
+        stopReason === "max_tokens" ||
+        stopReason === "max_tokens_reached" ||
+        // If token counts exist, being very close to your maxTokens is suspicious:
+        (typeof outTok === "number" && typeof options?.maxTokens === "number"
+          ? outTok >= Math.floor(options.maxTokens * 0.98)
+          : false);
+    
+      console.log(
+        `[Bedrock OCR] stop_reason=${stopReason}` +
+          (inTok != null ? ` input_tokens=${inTok}` : "") +
+          (outTok != null ? ` output_tokens=${outTok}` : "") +
+          ` output_chars=${claudeText.length}` +
+          (likelyTruncated ? " ⚠ likely_truncated" : "")
+      );
+    } catch {
+      // do nothing; diagnostics should never break the request
+    }
+    
     return claudeText;
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

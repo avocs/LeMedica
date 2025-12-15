@@ -138,8 +138,19 @@ export function PackageTable({
     }
   }
 
+  const ALL_COLUMN_KEYS: ColumnKey[] = ALL_COLUMNS
+    .map((c) => c.key)
+    .filter((k): k is ColumnKey => k !== "meta")
+
   const toggleColumn = (column: ColumnKey) => {
-    setVisibleColumns((prev) => (prev.includes(column) ? prev.filter((c) => c !== column) : [...prev, column]))
+    setVisibleColumns((prev) => {
+      const nextSet = new Set(prev)
+      if (nextSet.has(column)) nextSet.delete(column)
+      else nextSet.add(column)
+
+      // Rebuild in canonical order (so re-checked columns return to original position)
+      return ALL_COLUMN_KEYS.filter((k) => nextSet.has(k))
+    })
   }
 
   const renderCell = useCallback(

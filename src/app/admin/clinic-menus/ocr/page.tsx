@@ -260,19 +260,26 @@ export default function ClinicMenuOcrPage() {
     [batchId, packages, toast],
   )
 
-  // Download CSV
-  const handleDownloadCsv = useCallback(() => {
+  // Download CSV (Excel-safe UTF-8 with BOM)
+  const handleDownloadCsv = useCallback(async () => {
     if (!csvBlob || !batchId) return
 
-    const url = URL.createObjectURL(csvBlob)
+    // Read server blob as text, then re-blob with UTF-8 BOM
+    const csvText = await csvBlob.text()
+    const blobWithBom = new Blob(["\uFEFF", csvText], {
+      type: "text/csv;charset=utf-8",
+    })
+
+    const url = URL.createObjectURL(blobWithBom)
     const a = document.createElement("a")
     a.href = url
-    a.download = `clinic-menu-packages-${batchId}.csv`
+    a.download = `${batchId}.csv`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }, [csvBlob, batchId])
+
 
   // Upload CSV to admin
   const handleUploadToAdmin = useCallback(
