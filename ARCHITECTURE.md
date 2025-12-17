@@ -1,11 +1,9 @@
 # Clinic Menu OCR → CSV – Architecture
 
 This document explains how the **Clinic Menu OCR → CSV** feature is structured in the LeMedica codebase:
-
 - What each module/file does
 - How data flows from **PDF → OCR → AI → JSON → CSV**
 - How the **frontend admin UI** interacts with the **backend API**
-
 ---
 
 ## 1. High-Level Overview
@@ -28,23 +26,23 @@ Provide an **admin-only tool** that:
 ```txt
 LeMedica/
 │
-├─ .env.local                     # Environment variables (API keys, Bedrock config, etc.)
-├─ next.config.js                 # Next.js configuration (serverExternalPackages, body limits)
-├─ package.json                   # Project dependencies and scripts
-├─ tsconfig.json                  # TypeScript configuration
+├─ .env.local                         # Environment variables (API keys, Bedrock config, etc.)
+├─ next.config.js                     # Next.js configuration (serverExternalPackages, body limits)
+├─ package.json                       # Project dependencies and scripts
+├─ tsconfig.json                      # TypeScript configuration
 ├─ package-lock.json
 ├─ postcss.config.mjs
 ├─ tailwind.config.mjs
 |
-├─ .next/                         # build files
+├─ .next/                             # build files
 │
-├─ src/                           # Source Root
+├─ src/                               # SOURCE ROOT 
 │   ├─ app/                           # Next.js App Router: pages, layouts, API routes
-│   │   ├─ layout.tsx                 # Root layout
-│   │   ├─ page.tsx                   # Landing page
+│   │   ├─ layout.tsx                 # Root layout   
+│   │   ├─ page.tsx                   # Landing page, shows nothing but url to admin page
 │   │   │
 │   │   ├─ admin/                     # Admin dashboard UI
-│   │   │   └─ clinic-menus/          # Clinic menu tools
+│   │   │   └─ clinic-menus/          # Location for Clinic Menu Processing features
 │   │   │       └─ ocr/               # OCR import UI
 │   │   │           └─ page.tsx       # OCR upload and review interface
 │   │   │
@@ -52,12 +50,19 @@ LeMedica/
 │   │       └─ admin/
 │   │           └─ clinic-menus/
 │   │               ├─ route.ts       # POST /api/admin/clinic-menus (OCR pipeline entrypoint)
-│   │               └─ regenerate-csv/
+│   │               ├─ regenerate-csv/
 │   │                   └─ route.ts   # Utility API to regenerate structured CSV outputs
+│   │               └─ bulk-import-packages/
+│   │                   └─ route.ts   # Mock utility API to simulate uploading to existing admin system
 │   │
 │   ├─ components/                    # Reusable UI building blocks
 │   │   ├─ ocr/                       # OCR-specific UI (tables, previews, status blocks)
-│   │   └─ ui/                        # General-purpose UI components (buttons, modals, inputs)
+│   │     ├─ action-bar.tsx           # UI layout for bottom action bar
+│   │     ├─ debug-panel.tsx          # UI layout for debug-viewing features panel
+│   │     ├─ file-upload-panel.tsx    # UI layout for file/folder uploading portal
+│   │     ├─ ocr-summary-panel.tsx    # UI layout for OCR extraction results summary view panel
+│   │     └─ package-table.tsx        # UI layout for CSV preview/manual editing of OCR extraction results
+│   │   └─ ui/                        # General-purpose UI components (buttons, modals, inputs // v0 generated)
 │   │
 │   ├─ services/                      # Business logic + integrations (NOT React-specific)
 │   │   ├─ aiExtractor.ts             # Groups OCR pages & calls Claude via Bedrock
@@ -69,18 +74,22 @@ LeMedica/
 │       ├─ api/                       # Client-side API helpers for fetch calls
 │       └─ types/                     # Type definitions (OcrPage, PackageRow, etc.)
 │
-├─ data/                          # Local non-production data
-│   ├─ images/                    # For README.md visualisation
-│   ├─ tessdata/                  # Tesseract .traineddata files (eng, chi_sim, etc.)
-│   ├─ tmp/                       # Runtime temp space for debug snapshots
-│   └─ references/                # Configs, constants, reference dictionaries
+├─ data/                              # Local non-production data
+│   ├─ images/                        # For README.md visualisation           
+│   ├─ tessdata/                      # Tesseract .traineddata files (eng, chi_sim, etc.)  // technically kinda useless cuz tesseract fetches into root
+│   ├─ tmp/                           # !! Runtime temp space for raw OCR extraction texts // DEBUG CAN BE TURNED OFF IN ENV LOCAL
+│   └─ references/                    # Configs, constants, reference dictionaries
 │
 ├─ tests/                           # Performance check for OCR extractor
-│   ├─ perf-check/                  # Quick CSV drop spot for comparison
-│   ├─ test-menus/                  # Examples to test on
+│   ├─ perf-check/                  # Generated CSVs saved for manual performance evaluation
+│   ├─ test-menus/                  # Singular file examples to test on, including chinese jpegs, english pdfs
 │   └─ test-menus-folder/           # Example folder to test on
 │
-└─ node_modules/                  # Installed dependencies (auto-managed)
+├─ outputs/                         # EXTRACTION & GENERATION RESULT FOLDER
+│   ├─ csv/                         # Generated CSVs automatically saved here
+│   └─ ocr/                         # Package extracted JSON automatically saved here 
+│
+└─ node_modules/                  # Installed dependencies (auto-managed, must reside in root)
 
 
 ```
