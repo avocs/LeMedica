@@ -90,3 +90,15 @@ Saves to a csv:
     - **Current Scenario**: Like point 2, OCR gives bad extracted results when blurry input is given. can still infer relatively better, but quality of extraction suffers.
     - **What has been tried**: Preprocessing image as explained above.
 
+
+4. Bedrock token limits???
+    - **Current Scenario**: tried waiting a few days in between upload tests, yet i would hit the token limit immediately somehow
+    - even with sub 500 tokens it crashes
+    - something up with the AWS config? 
+    ```
+        [Route] calling bedrock...
+        [Bedrock OCR][PHASE0] e4a8dc5c-5d44-45ac-9ebc-484ab061b76b: 947 chars (~237 tokens)
+        [Bedrock OCR] Using inference profile ARN: arn:aws:bedrock:us-east-1:866740596283:inference-profile/us.anthropic.claude-3-5...
+        C:\Users\User\Documents\side_quest\LeMedica\.next\dev\server\chunks\[root-of-the-server]__49501f84._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+        OCR menu processing failed: Error: Bedrock extraction failed: Too many tokens per day, please wait before trying again.
+    ```
