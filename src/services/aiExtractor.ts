@@ -74,19 +74,52 @@ export async function extractPackagesFromOcrText(
     /* PHASE 0 — OCR → LEGIBLE TEXT                                     */
     /* ================================================================ */
 
-    const phase0Prompt = buildSemanticCleanupPrompt(orderedPages);
-    logPromptStats(fileId, phase0Prompt, "PHASE0");
+    let phase0Texts: string[] = [];
 
-    const phase0Response = await callBedrockForExtraction(phase0Prompt, {
-      maxTokens: 2500,
-      temperature: 0,
-    });
+    for (const page of orderedPages) {
+      const phase0Prompt = buildSemanticCleanupPrompt([page]);
+
+      logPromptStats(
+        fileId,
+        phase0Prompt,
+        `PHASE0_P${page.pageNumber}`
+      );
+
+      const pageResponse = await callBedrockForExtraction(phase0Prompt, {
+        maxTokens: 1000, // per-page, safe
+        temperature: 0.1,
+      });
+
+      // Hard guard: Nova is allowed to return empty
+      if (!pageResponse || !pageResponse.trim()) {
+        console.warn(
+          `[PHASE0] Empty output for page ${page.pageNumber}, falling back to raw OCR`
+        );
+        phase0Texts.push(
+          `--- PAGE ${page.pageNumber} ---\n${page.rawText}`
+        );
+        continue;
+      }
+
+      writeDebug(
+        jobDir,
+        `${filePrefix}_phase0_page${page.pageNumber}.txt`,
+        pageResponse
+      );
+
+      phase0Texts.push(
+        `--- PAGE ${page.pageNumber} ---\n${pageResponse}`
+      );
+    }
+
+    const phase0Response = phase0Texts.join("\n\n");
 
     writeDebug(
       jobDir,
       `${filePrefix}_phase0_semantic.txt`,
       phase0Response
     );
+
 
     /* ================================================================ */
     /* PHASE 1 — LEGIBLE TEXT → RAW JSON                                */
@@ -97,6 +130,10 @@ export async function extractPackagesFromOcrText(
       orderedPages
     );
     logPromptStats(fileId, phase1Prompt, "PHASE1");
+
+    // to make sure im not tripping
+    // console.log("PHASE 1 Prompt length chars:", phase1Prompt.length);
+    // console.log("Preview:", phase1Prompt.slice(0, 500));
 
     const phase1Response = await callBedrockForExtraction(phase1Prompt, {
       maxTokens: 3000,
@@ -132,7 +169,7 @@ export async function extractPackagesFromOcrText(
       logPromptStats(fileId, phase2Prompt, "PHASE2");
 
       const phase2Response = await callBedrockForExtraction(phase2Prompt, {
-        maxTokens: 4000,
+        maxTokens: 3000,
         temperature: 0.1,
       });
 
@@ -187,37 +224,44 @@ export async function extractPackagesFromOcrText(
 function buildSemanticCleanupPrompt(pages: OcrPage[]): string {
   const joined = pages
     .map(
-      (p) =>
-        `--- PAGE ${p.pageNumber} ---\n${p.rawText}`
+      (p) => `--- PAGE ${p.pageNumber} ---\n${p.rawText}`
     )
     .join("\n");
 
   return `
-You are cleaning OCR output.
-
 TASK
-----
-Rewrite the OCR text into clean, readable, human-legible menu text.
+====
+Rewrite the OCR text so that EACH price appears on its own line with nearby words.
+
+YOU MUST
+========
+- Preserve ALL items and prices exactly.
+- Preserve original language(s).
+- Restore line breaks and grouping where possible.
+- Keep every priced item on its own line.
+- If structure is unclear, still output text verbatim with line breaks.
 
 RULES
------
-- DO NOT summarize.
-- DO NOT drop items.
-- DO NOT invent content.
-- Restore line breaks and grouping.
-- Preserve original language(s).
-- Keep prices exactly as written.
-- If structure is unclear, separate items onto new lines.
+=====
+- Do NOT summarize.
+- Do NOT remove words.
+- Do NOT invent text.
+- ONLY insert line breaks.
+- Group nearby words with their closest price.
+- If unsure, keep text but still add line breaks.
 
-OUTPUT
-------
-Return ONLY plain text. No JSON. No explanations.
+OUTPUT RULE
+===========
+- Return ONLY plain text.
+- Returning empty output is NOT allowed.
+- If cleanup is not possible, return the OCR text verbatim.
 
 OCR INPUT
----------
+=========
 ${joined}
 `;
 }
+
 
 /* ------------------------------------------------------------------ */
 /* PHASE 1 PROMPT                                                     */
@@ -228,43 +272,61 @@ function buildRawExtractionPrompt(
   pages: OcrPage[]
 ): string {
   return `
-You are extracting structured data from CLEAN menu text.
-
 TASK
-----
-Convert the menu text into RAW package JSON.
+====
+Extract structured package data from menu text.
 
-RULES
------
-- EACH priced item = one package
-- Do NOT normalize names
-- Do NOT translate
-- Do NOT infer hospitals or categories
-- Keep text close to source
-- Prefer emitting uncertain packages
+HARD REQUIREMENTS
+=================
+- You MUST return a single valid JSON object.
+- The FIRST character of the response MUST be '{'.
+- The LAST character of the response MUST be '}'.
+- Do NOT include markdown, code fences, or explanations.
 
-OUTPUT FORMAT (STRICT JSON ONLY)
---------------------------------
+PACKAGE RULES
+=============
+- EACH distinct price/range = ONE package.
+- Price anchors include: RM, $, £, €, ฿, numbers with currency.
+- If N prices exist, you MUST output at least N packages.
+- Returning an empty packages array is NOT allowed if any prices exist.
+- If unsure, still emit a package with low confidence.
+
+FAILSAFE
+========
+- If package boundaries are unclear:
+  - Emit one package per price.
+  - Title may be "Package – <price>".
+  - confidence_score must be < 0.6.
+
+DATA RULES
+==========
+- Do NOT normalize names.
+- Do NOT translate.
+- Keep text close to source.
+- Prefer emitting uncertain packages over dropping them.
+
+OUTPUT FORMAT (STRICT)
+======================
 {
   "packages": [
     {
-      "title": string,
-      "description": string,
-      "details": string,
-      "price": number | null,
-      "currency": string,
-      "duration": string,
+      "title": "",
+      "description": "",
+      "details": "",
+      "price": null,
+      "currency": "",
+      "duration": "",
       "_meta": {
-        "source_page": number,
-        "confidence_score": number,
-        "warnings": string[]
+        "source_page": 0,
+        "confidence_score": 0.0,
+        "warnings": []
       }
     }
   ]
 }
 
 MENU TEXT
----------
+=========
 ${cleanedText}
 `;
 }
@@ -280,29 +342,37 @@ function buildCanonicalMappingPrompt(
   const fileName = pages[0]?.fileName ?? "unknown-file";
 
   return `
-You are a data normalization worker.
-
 TASK
-----
+====
 Normalize RAW packages into FINAL schema.
-Apply canonical treatment names EXACTLY.
-Translate non-English content.
-Preserve meaning.
+
+HARD REQUIREMENTS
+=================
+- Return ONLY a single valid JSON object.
+- First character MUST be '{', last MUST be '}'.
+- Do NOT include markdown or explanations.
+
+NORMALIZATION RULES
+===================
+- Apply canonical treatment names EXACTLY when applicable.
+- Translate non-English content to English.
+- Preserve original meaning.
+- Do NOT drop packages.
 
 ${getCanonicalTreatmentBlock()}
 
-OUTPUT FORMAT (STRICT JSON ONLY)
---------------------------------
+OUTPUT FORMAT
+=============
 {
   "packages": [ { FULL PACKAGE ROW } ]
 }
 
 RAW PACKAGES
-------------
+============
 ${JSON.stringify(rawPackages, null, 2)}
 
 OCR CONTEXT
------------
+===========
 ${pages
   .map(
     (p) =>
@@ -311,7 +381,6 @@ ${pages
   .join("\n")}
 `;
 }
-
 /* ------------------------------------------------------------------ */
 /* UTILITIES                                                          */
 /* ------------------------------------------------------------------ */

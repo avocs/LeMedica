@@ -24,6 +24,7 @@ function getRegionFromArn(arn: string): string | null {
   return match ? match[1] : null;
 }
 
+
 /**
  * resolveModelId
  * --------------
@@ -38,23 +39,14 @@ function resolveModelId(preferred?: string): string {
   let modelId = preferred || DEFAULT_MODEL_ID;
 
   // If DEFAULT_MODEL_ID is already an ARN (starts with "arn:aws:bedrock:"), use it directly
-  const isAlreadyArn = modelId.startsWith("arn:aws:bedrock:");
-
-  if (isAlreadyArn) {
-    // Validate that ARN region matches configured region
+  if (modelId.startsWith("arn:aws:bedrock:")) {
     const arnRegion = getRegionFromArn(modelId);
     if (arnRegion && arnRegion !== configuredRegion) {
       console.error(
-        `\n[Bedrock OCR] ❌ REGION MISMATCH DETECTED:\n` +
-        `  • Your AWS_REGION is set to: ${configuredRegion}\n` +
-        `  • But your inference profile ARN is for region: ${arnRegion}\n` +
-        `  • This WILL cause "model identifier invalid" errors.\n\n` +
-        `SOLUTION: Change AWS_REGION in .env.local to match the ARN region:\n` +
-        `  AWS_REGION=${arnRegion}\n\n` +
-        `Or create new inference profiles in ${configuredRegion} and update your ARNs.\n`
+        `[Bedrock OCR] REGION MISMATCH: AWS_REGION=${configuredRegion}, ARN region=${arnRegion}`
       );
     }
-    console.log("[Bedrock OCR] Using inference profile ARN:", modelId.substring(0, 80) + "...");
+    console.log("[Bedrock OCR] Using model:", modelId);
     return modelId;
   }
 
@@ -107,113 +99,76 @@ export async function callBedrockForExtraction(
   prompt: string,
   options?: { modelId?: string; maxTokens?: number; temperature?: number }
 ): Promise<string> {
-  let resolvedModelId: string | undefined;
-  
-  try {
-    // Resolve model ID first (throws if missing)
-    resolvedModelId = resolveModelId(options?.modelId);
-    const maxTokens = options?.maxTokens ?? 6000;
-    const temperature = options?.temperature ?? 0.2;
+  const resolvedModelId = resolveModelId(options?.modelId);
+  const maxTokens = options?.maxTokens ?? 3000;
+  const temperature = options?.temperature ?? 0.1;
+  const isNova = resolvedModelId.toLowerCase().includes("nova");
 
-    const input = {
-      modelId: resolvedModelId,
-      contentType: "application/json",
-      accept: "application/json",
-      body: JSON.stringify({
+  const bodyPayload = isNova
+    ? {
+        messages: [
+          {
+            role: "user",
+            content: [{ text: prompt }], // ✅ correct format
+          },
+        ],
+        inferenceConfig: { maxTokens, temperature },
+      }
+    : {
         anthropic_version: "bedrock-2023-05-31",
         max_tokens: maxTokens,
         temperature,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    };
+        messages: [
+          { role: "user", content: [{ type: "text", text: prompt }] },
+        ],
+      };
 
-    const command = new InvokeModelCommand(input);
-    const response = await bedrockClient.send(command);
+  const command = new InvokeModelCommand({
+    modelId: resolvedModelId,
+    contentType: "application/json",
+    accept: "application/json",
+    body: JSON.stringify(bodyPayload),
+  });
 
-    // Convert raw response into text (same pattern as bedrock-config.ts)
-    const rawText = await (async () => {
-      const body: any = (response as any).body;
-      if (typeof body?.transformToByteArray === "function") {
-        return new TextDecoder().decode(await body.transformToByteArray());
-      }
-      if (body instanceof Uint8Array) {
-        return new TextDecoder().decode(body);
-      }
-      return String(body ?? "");
-    })();
+  const response = await bedrockClient.send(command);
 
-    const responseBody = JSON.parse(rawText || "{}");
-    const claudeText = responseBody?.content?.[0]?.text || "";
-    
-    // ---- Bedrock response diagnostics (safe to keep in dev) ----
-    try {
-      const stopReason =
-        responseBody?.stop_reason ??
-        responseBody?.stopReason ??
-        responseBody?.stop_reason?.reason ??
-        "unknown";
-    
-      const usage = responseBody?.usage ?? null;
-    
-      // Anthropic responses often have usage like:
-      // { input_tokens, output_tokens } (names can vary)
-      const inTok =
-        usage?.input_tokens ??
-        usage?.inputTokens ??
-        usage?.input_token_count ??
-        usage?.prompt_tokens ??
-        null;
-    
-      const outTok =
-        usage?.output_tokens ??
-        usage?.outputTokens ??
-        usage?.output_token_count ??
-        usage?.completion_tokens ??
-        null;
-    
-      const likelyTruncated =
-        stopReason === "max_tokens" ||
-        stopReason === "max_tokens_reached" ||
-        // If token counts exist, being very close to your maxTokens is suspicious:
-        (typeof outTok === "number" && typeof options?.maxTokens === "number"
-          ? outTok >= Math.floor(options.maxTokens * 0.98)
-          : false);
-    
-      console.log(
-        `[Bedrock OCR] stop_reason=${stopReason}` +
-          (inTok != null ? ` input_tokens=${inTok}` : "") +
-          (outTok != null ? ` output_tokens=${outTok}` : "") +
-          ` output_chars=${claudeText.length}` +
-          (likelyTruncated ? " ⚠ likely_truncated" : "")
-      );
-    } catch {
-      // do nothing; diagnostics should never break the request
-    }
-    
-    return claudeText;
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    
-    // Include resolved model ID in validation error logs for debugging
-    if (msg.includes("ValidationException")) {
-      console.error("[Bedrock OCR] Validation error for model:", resolvedModelId || "unknown", error);
-    }
+  // ---- Log full SDK metadata for debugging ----
+  console.log("[Bedrock OCR] Full SDK Response Metadata:", response.$metadata);
 
-    // Re-throw with context (matches bedrock-config.ts error handling)
-    if (msg.includes("UnrecognizedClientException") || msg.includes("InvalidSignatureException")) {
-      throw new Error("AWS Bedrock authentication failed.");
+  // ---- Decode the body ----
+  const rawText = await (async () => {
+    const body: any = response.body;
+    if (typeof body?.transformToByteArray === "function") {
+      return new TextDecoder().decode(await body.transformToByteArray());
     }
-    if (msg.includes("ValidationException")) {
-      throw new Error("AWS Bedrock validation error: " + msg);
+    if (body instanceof Uint8Array) {
+      return new TextDecoder().decode(body);
     }
-    if (msg.includes("ModelNotReadyException") || msg.includes("ThrottlingException")) {
-      throw new Error("AWS Bedrock temporarily unavailable.");
-    }
-    if (msg.includes("AccessDeniedException")) {
-      throw new Error("Permission denied for AWS Bedrock.");
-    }
+    return String(body ?? "");
+  })();
 
-    throw new Error("Bedrock extraction failed: " + msg);
-  }
+  // ---- Parse model output JSON ----
+  const responseBody = JSON.parse(rawText || "{}");
+
+  // ---- Extract text from Nova message content ----
+  const extractedText =
+    responseBody?.output?.message?.content
+      ?.map((c: any) => c.text || "")
+      .filter(Boolean)
+      .join("\n") || "";
+
+  // ---- Log diagnostic info ----
+  const stopReason = responseBody?.stopReason ?? "unknown";
+  const usage = responseBody?.usage ?? {};
+  const inTok = usage?.inputTokens ?? null;
+  const outTok = usage?.outputTokens ?? null;
+
+  console.log(
+    `[Bedrock OCR] stop_reason=${stopReason}` +
+      (inTok != null ? ` input_tokens=${inTok}` : "") +
+      (outTok != null ? ` output_tokens=${outTok}` : "") +
+      ` output_chars=${extractedText.length}`
+  );
+
+  return extractedText;
 }
-

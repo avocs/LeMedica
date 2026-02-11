@@ -1,0 +1,366 @@
+{
+  "success": true,
+  "batch_id": "b_20260211_180918_yksw",
+  "files": [
+    {
+      "file_id": "c34d7643-15af-43f9-9913-62f8408f9665",
+      "original_name": "iv-drip-menu.pdf",
+      "page_count": 1
+    }
+  ],
+  "packages": [
+    {
+      "title": "Basic Hydration",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 80,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Calm Drip",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 480,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Liver Detox Drip",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 280,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Slimming Drip",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 350,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Skin Health Drip",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 280,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Body Reset",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 380,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Energy Booster & Recovery",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 250,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Essential Multivi & Elderly NAD+",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": null,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "price missing; set to null",
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "price missing; set to null",
+          "Missing required fields: hospital_name, treatment_name, price"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Peak Performance All Inclusive Vitamin Exosome, Anti-Aging & Restore High Dose Vitamin C Premium & Restore",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": null,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "price missing; set to null",
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "price missing; set to null",
+          "Missing required fields: hospital_name, treatment_name, price"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Package – RM 1200",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 1200,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 0.5,
+        "warnings": [
+          "Price anchor 'RM 1200' appears in ambiguous context",
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Package – RM 1500",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 1500,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 0.5,
+        "warnings": [
+          "Price anchor 'RM 1500' appears in ambiguous context",
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Package – RM 3500",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 3500,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 0.5,
+        "warnings": [
+          "Price anchor 'RM 3500' appears in ambiguous context",
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Package – RM 950",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 950,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 0.5,
+        "warnings": [
+          "Price anchor 'RM 950' appears in ambiguous context",
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Herpes Fighter",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 400,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "HPV Fighter",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": 380,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 1,
+        "warnings": [
+          "currency RM not supported; defaulting to USD",
+          "status missing; defaulting to active",
+          "Missing required fields: hospital_name, treatment_name"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    },
+    {
+      "title": "Protection+",
+      "hospital_name": "",
+      "treatment_name": "",
+      "price": null,
+      "currency": "USD",
+      "featured": false,
+      "status": "active",
+      "is_le_package": false,
+      "_meta": {
+        "source_page": 1,
+        "confidence_score": 0.5,
+        "warnings": [
+          "No price information found for this package",
+          "price missing; set to null",
+          "currency missing; defaulting to USD",
+          "status missing; defaulting to active",
+          "price missing; set to null",
+          "Missing required fields: hospital_name, treatment_name, price"
+        ],
+        "matcher": {},
+        "source_file": "iv-drip-menu.pdf"
+      }
+    }
+  ],
+  "summary": {
+    "total": 16,
+    "valid": 0,
+    "withWarnings": 0,
+    "invalid": 16
+  }
+}
